@@ -1,17 +1,12 @@
 import 'dart:collection';
 import 'dart:ffi';
-import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:google_maps_webservice/places.dart';
-import 'package:googleapis/places/v1.dart' as places;
 import 'package:google_maps_webservice/places.dart' as places;
-import 'package:googleapis_auth/auth_io.dart';
 
 
 class Routecreation extends StatefulWidget {
@@ -56,7 +51,7 @@ class _MyWidgetState extends State<Routecreation> {
   final String _locationName = "";
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  TextEditingController _searchController = TextEditingController(); // Controller for the search bar
+  final TextEditingController _searchController = TextEditingController(); // Controller for the search bar
   bool _showSearchBar = false; // New state for showing/hiding the search bar
   String _address = '';
   String _establishmentName = '';
@@ -80,7 +75,7 @@ class _MyWidgetState extends State<Routecreation> {
   
   String _address = '';
   String _establishmentName = '';
-  int _stepNumber= 0;
+  final int _stepNumber= 0;
 
 
   //Hashsets that will gather data
@@ -89,19 +84,19 @@ class _MyWidgetState extends State<Routecreation> {
   final rideDetails = HashSet<String>();
 
   //method to use in storing data
-  void insertLocationDetails(String address, String latLang, String _name){
-    locationDetails.addAll({address,latLang,_name});
-    String step = 'Step' + '$_stepNumber';
+  void insertLocationDetails(String address, String latLang, String name){
+    locationDetails.addAll({address,latLang,name});
+    String step = 'Step' '$_stepNumber';
     insertDataintoMap(step, locationDetails);
   } 
   void insertWalkDetails(String walkTo){
     walkDetails.addAll({'Walk',walkTo});
-    String step = 'Step' + '$_stepNumber'; 
+    String step = 'Step' '$_stepNumber'; 
     insertDataintoMap(step, walkDetails);
   }
    insertRideDetails(String transpoMode,String fare, String fromRoute, String toRoute,String stopLoc){
     rideDetails.addAll({'Ride',transpoMode,fare,fromRoute,toRoute,stopLoc});
-    String step = 'Step' + '$_stepNumber'; 
+    String step = 'Step' '$_stepNumber'; 
     insertDataintoMap(step, rideDetails);
   }
   void insertDataintoMap(String step,HashSet details){
@@ -120,7 +115,7 @@ class _MyWidgetState extends State<Routecreation> {
 
       setState(() {
         _selectedMarker = Marker(
-          markerId: MarkerId('selected-location'),
+          markerId: const MarkerId('selected-location'),
           position: position,
           infoWindow: InfoWindow(title: name),
         );
@@ -178,7 +173,7 @@ void _searchPlaces(String query) async {
 
     setState(() {
       _selectedMarker = Marker(
-        markerId: MarkerId('search-location'),
+        markerId: const MarkerId('search-location'),
         position: location,
         infoWindow: InfoWindow(title: place.name),
       );
@@ -227,26 +222,26 @@ void _searchPlaces(String query) async {
              Row(
               children: [
                 Container(
-                  margin: EdgeInsets.all(5),
+                  margin: const EdgeInsets.all(5),
                   alignment: Alignment.center,
-                  child: SvgPicture.asset('assets/icons/from.svg'),
                   height: 48.89,
                   width: 48.89,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
+                  child: SvgPicture.asset('assets/icons/from.svg'),
                 ),
                 Expanded(
                   child: Container(
-                    margin: EdgeInsets.only(right: 30.0),
+                    margin: const EdgeInsets.only(right: 30.0),
                     height: 37,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xff1D1617).withOpacity(0.11),
+                          color: const Color(0xff1D1617).withOpacity(0.11),
                           blurRadius: 4,
                           spreadRadius: 0.0,
                         ),
@@ -267,7 +262,7 @@ void _searchPlaces(String query) async {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                         hintText: 'Search for places...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -275,7 +270,7 @@ void _searchPlaces(String query) async {
                         ),
                         suffixIcon: _showSearchBar
                             ? IconButton(
-                                icon: Icon(Icons.cancel),
+                                icon: const Icon(Icons.cancel),
                                 onPressed: () {
                                   setState(() {
                                     _showSearchBar = false;
@@ -490,7 +485,7 @@ void _searchPlaces(String query) async {
   }
 
    Widget buildMap() {
-  return Container(
+  return SizedBox(
     width: double.infinity,
     height: 200,
     child: GoogleMap(
@@ -969,16 +964,16 @@ void _searchPlaces(String query) async {
             margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
             child: ElevatedButton(
               onPressed: () {
-                var _location = _locationController.text;
-                var _locationAddress = _address;
-                var _locationName = _locationNameController.text;
-                var  _walkTo = _walkToController.text;
-                var _estiFare = _estiFareController.text;
-                var _stopLocation = _stoplocationController.text;
-                var _endLocation = _endLocController.text;
-                var _endLocationName = _endLocNameController.text;
-                var _toRoute = _toRouteController.text;
-                var _fromRoute = _fromRouteController.text;
+                var location = _locationController.text;
+                var locationAddress = _address;
+                var locationName = _locationNameController.text;
+                var  walkTo = _walkToController.text;
+                var estiFare = _estiFareController.text;
+                var stopLocation = _stoplocationController.text;
+                var endLocation = _endLocController.text;
+                var endLocationName = _endLocNameController.text;
+                var toRoute = _toRouteController.text;
+                var fromRoute = _fromRouteController.text;
 
               },
               style: ElevatedButton.styleFrom(
