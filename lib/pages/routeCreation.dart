@@ -4,6 +4,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:google_maps_webservice/places.dart';
+import 'package:googleapis/places/v1.dart' as places;
+import 'package:google_maps_webservice/places.dart' as places;
+import 'package:googleapis_auth/auth_io.dart';
 
 
 class Routecreation extends StatefulWidget {
@@ -30,74 +34,137 @@ class _MyWidgetState extends State<Routecreation> {
   List<Widget> rideWidgets = [];
   List<Widget> doneWidgets =[];
 
-  GoogleMapController? _controller;
+  final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI'; // Replace with your actual API key
+  late final GoogleMapsPlaces _places;
+
+  @override
+  void initState() {
+    super.initState();
+    _places = GoogleMapsPlaces(apiKey: apiKey); // Initialize _places with the API key
+  }
+
+
+   GoogleMapController? _controller;
   Marker? _selectedMarker;
   String _locationName = "";
   TextEditingController _locationController = TextEditingController();
   TextEditingController _addressController = TextEditingController();
+  TextEditingController _searchController = TextEditingController(); // Controller for the search bar
+  bool _showSearchBar = false; // New state for showing/hiding the search bar
+  String _address = '';
+  String _establishmentName = '';
+  bool submitClicked = false;
 
   @override
   void dispose() {
     _locationController.dispose();
-     _addressController.dispose();
+    _addressController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
   
-  String _address = '';
-  String _establishmentName = '';
 
-
-Future<void> _onMapTap(LatLng position) async {
+  Future<void> _onMapTap(LatLng position) async {
   List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-  
-  if (placemarks.isNotEmpty) {
-    Placemark placemark = placemarks[0];
-    String name = placemark.name ?? "";
-    String address = "${placemark.street ?? ""}, ${placemark.locality ?? ""}, ${placemark.administrativeArea ?? ""}, ${placemark.country ?? ""}";
 
+    if (placemarks.isNotEmpty) {
+      Placemark placemark = placemarks[0];
+      String name = placemark.name ?? "";
+      String address = "${placemark.street ?? ""}, ${placemark.locality ?? ""}, ${placemark.administrativeArea ?? ""}, ${placemark.country ?? ""}";
+
+      setState(() {
+        _selectedMarker = Marker(
+          markerId: MarkerId('selected-location'),
+          position: position,
+          infoWindow: InfoWindow(title: name),
+        );
+        _mapClicked = true;
+        _locationController.text = name;
+        _addressController.text = address;
+        _address = address;
+
+        // Fetch establishment name
+        _fetchPlaceDetails(position);
+      });
+    }
+  }
+
+
+ Future<void> _fetchPlaceDetails(LatLng position) async {
+  // Create an instance of the Location class from google_maps_webservice
+  final location = places.Location(
+    lat: position.latitude,
+    lng: position.longitude,
+  );
+
+  // Fetch nearby places using the nearbySearch method
+  final response = await _places.searchNearbyWithRadius(
+    location,
+    500, // Radius in meters
+    type: 'establishment',
+    keyword: 'church|coffee shop|mall|establishment',
+  );
+
+  // Check the response and update state
+  if (response.status == 'OK' && response.results.isNotEmpty) {
+    final establishment = response.results.first;
+    final name = establishment.name;
     setState(() {
-      _selectedMarker = Marker(
-        markerId: MarkerId('selected-location'),
-        position: position,
-        infoWindow: InfoWindow(title: name),
-      );
-      _mapClicked = true;
-      _locationController.text = name;
-      _addressController.text = address;
-      _address = address;
-
-      // Fetch establishment name
-      _fetchPlaceDetails(position);
+      _establishmentName = name;
+    });
+  } else {
+    setState(() {
+      _establishmentName = 'No nearby establishment found';
     });
   }
 }
 
-Future<void> _fetchPlaceDetails(LatLng position) async {
-  const apiKey = 'YOUR_GOOGLE_PLACES_API_KEY';
-  final url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
-      '?location=${position.latitude},${position.longitude}&radius=500'
-      '&keyword=church|coffee shop|mall|establishment'
-      '&key=$apiKey';
 
-  final response = await http.get(Uri.parse(url));
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    final results = data['results'] as List<dynamic>;
-    if (results.isNotEmpty) {
-      final establishment = results[0];
-      final name = establishment['name'];
+
+
+
+void _searchPlaces(String query) async {
+  final response = await _places.searchByText(query);
+
+  if (response.status == 'OK' && response.results.isNotEmpty) {
+    final place = response.results.first;
+    final location = LatLng(place.geometry?.location.lat ?? 0.0, place.geometry?.location.lng ?? 0.0);
+
+    setState(() {
+      _selectedMarker = Marker(
+        markerId: MarkerId('search-location'),
+        position: location,
+        infoWindow: InfoWindow(title: place.name),
+      );
+      _controller?.animateCamera(CameraUpdate.newLatLng(location));
+      _searchController.clear();
+      _showSearchBar = false; // Hide the search bar after selecting a location
+       _locationController.text = place.formattedAddress ?? ''; // Show the selected address in the TextField
+        _address = place.formattedAddress ?? ''; // Update the _address with the selected address
+
+        // Fetch establishment name for the searched location
+        _fetchPlaceDetails(location);
+    });
+
+     // Update the address and establishment name
       setState(() {
-        _establishmentName = name;
+        _mapClicked = true; // Show address and establishment name
+        _address = place.formattedAddress ?? ''; // Update _address with the new location's address
+        _searchController.clear(); // Clear the search bar
+        _showSearchBar = false; // Hide the search bar
       });
-    } else {
-      setState(() {
-        _establishmentName = 'No nearby establishment found';
-      });
-    }
+
   } else {
-    throw Exception('Failed to load place details');
+    // Handle no results found
+    setState(() {
+      _searchController.clear();
+      _showSearchBar = false;
+    });
   }
 }
+
+
+
 
 
   @override
@@ -111,53 +178,77 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
              
-              Row(
-                children: [
-                  Container(
-                    margin: EdgeInsets.all(5),
-                    alignment: Alignment.center,
-                    child: SvgPicture.asset('assets/icons/from.svg'),
-                    height: 48.89,
-                    width: 48.89,
+             Row(
+              children: [
+                Container(
+                  margin: EdgeInsets.all(5),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset('assets/icons/from.svg'),
+                  height: 48.89,
+                  width: 48.89,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(right: 30.0),
+                    height: 37,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      margin: EdgeInsets.only(right: 30.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _locationController,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'From...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xff1D1617).withOpacity(0.11),
+                          blurRadius: 4,
+                          spreadRadius: 0.0,
                         ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _locationController,
+                      onTap: () {
+                        setState(() {
+                          _showSearchBar = true; 
+                          submitClicked = false;
+                        });
+                      },
+                      onSubmitted: (query) {
+                        _searchPlaces(query);
+                        submitClicked = true;
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        hintText: 'Search for places...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide.none,
+                        ),
+                        suffixIcon: _showSearchBar
+                            ? IconButton(
+                                icon: Icon(Icons.cancel),
+                                onPressed: () {
+                                  setState(() {
+                                    _showSearchBar = false;
+                                    _searchController.clear();
+                                  });
+                                },
+                              )
+                            : null,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-             if(_mapClicked)
+
+             
+
+             if(_mapClicked || submitClicked )
              Column(
               children: [
                   Container(
@@ -352,18 +443,20 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
   }
 
    Widget buildMap() {
-    return SizedBox(
-      height: 400,
-      child: GoogleMap(
-        initialCameraPosition: _initialCameraPosition,
-        myLocationButtonEnabled: false,
-        zoomControlsEnabled: false,
-        onMapCreated: (controller) => _controller = controller,
-        markers: _selectedMarker != null ? {_selectedMarker!} : {},
-        onTap: _onMapTap,
-      ),
-    );
-  }
+  return Container(
+    width: double.infinity,
+    height: 200,
+    child: GoogleMap(
+      initialCameraPosition: _initialCameraPosition,
+      onMapCreated: (controller) {
+        _controller = controller;
+      },
+      onTap: _onMapTap,
+      markers: _selectedMarker != null ? {_selectedMarker!} : {},
+    ),
+  );
+}
+
 
     Widget buildRide(){
       return Column(
