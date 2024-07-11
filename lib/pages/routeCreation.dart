@@ -1,3 +1,7 @@
+import 'dart:collection';
+import 'dart:ffi';
+import 'dart:js_interop';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -30,11 +34,22 @@ class _MyWidgetState extends State<Routecreation> {
   List<Widget> rideWidgets = [];
   List<Widget> doneWidgets =[];
 
+  Map<String,HashSet>steps = HashMap();
+  
+
   GoogleMapController? _controller;
   Marker? _selectedMarker;
-  String _locationName = "";
-  TextEditingController _locationController = TextEditingController();
-  TextEditingController _addressController = TextEditingController();
+  final String _locationName = "";
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _locationNameController = TextEditingController();
+  final TextEditingController _walkToController = TextEditingController();
+  final TextEditingController _estiFareController = TextEditingController();
+  final TextEditingController _stoplocationController = TextEditingController();
+  final TextEditingController _endLocController = TextEditingController();
+  final TextEditingController _endLocNameController = TextEditingController();
+   final TextEditingController _toRouteController = TextEditingController();
+    final TextEditingController _fromRouteController = TextEditingController();
 
   @override
   void dispose() {
@@ -45,6 +60,34 @@ class _MyWidgetState extends State<Routecreation> {
   
   String _address = '';
   String _establishmentName = '';
+  int _stepNumber= 0;
+
+
+  //Hashsets that will gather data
+  final locationDetails = HashSet();
+  final walkDetails = HashSet<String>();
+  final rideDetails = HashSet<String>();
+
+  //method to use in storing data
+  void insertLocationDetails(String address, String latLang, String _name){
+    locationDetails.addAll({address,latLang,_name});
+    String step = 'Step' + '$_stepNumber';
+    insertDataintoMap(step, locationDetails);
+  } 
+  void insertWalkDetails(String walkTo){
+    walkDetails.addAll({'Walk',walkTo});
+    String step = 'Step' + '$_stepNumber'; 
+    insertDataintoMap(step, walkDetails);
+  }
+   insertRideDetails(String transpoMode,String fare, String fromRoute, String toRoute,String stopLoc){
+    rideDetails.addAll({'Ride',transpoMode,fare,fromRoute,toRoute,stopLoc});
+    String step = 'Step' + '$_stepNumber'; 
+    insertDataintoMap(step, rideDetails);
+  }
+  void insertDataintoMap(String step,HashSet details){
+    steps.addAll({step: details});
+
+  }
 
 
 Future<void> _onMapTap(LatLng position) async {
@@ -57,7 +100,7 @@ Future<void> _onMapTap(LatLng position) async {
 
     setState(() {
       _selectedMarker = Marker(
-        markerId: MarkerId('selected-location'),
+        markerId: const MarkerId('selected-location'),
         position: position,
         infoWindow: InfoWindow(title: name),
       );
@@ -114,26 +157,26 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               Row(
                 children: [
                   Container(
-                    margin: EdgeInsets.all(5),
+                    margin: const EdgeInsets.all(5),
                     alignment: Alignment.center,
-                    child: SvgPicture.asset('assets/icons/from.svg'),
                     height: 48.89,
                     width: 48.89,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
                     ),
+                    child: SvgPicture.asset('assets/icons/from.svg'),
                   ),
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(right: 30.0),
+                      margin: const EdgeInsets.only(right: 30.0),
                       height: 37,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(5),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
+                            color: const Color(0xff1D1617).withOpacity(0.11),
                             blurRadius: 4,
                             spreadRadius: 0.0,
                           ),
@@ -144,7 +187,7 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                           hintText: 'From...',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(5),
@@ -161,11 +204,11 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
              Column(
               children: [
                   Container(
-                    padding: EdgeInsets.only(left: 20.0),
+                    padding: const EdgeInsets.only(left: 20.0),
                     alignment: Alignment.centerLeft,
                     child: Text(
                       _address,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.black,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -174,12 +217,12 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                   ),
 
                   Container(
-                    padding: EdgeInsets.only(left: 20.0),
+                    padding: const EdgeInsets.only(left: 20.0),
                     alignment: Alignment.centerLeft,
-                    child: Text(
+                    child: const Text(
                       'establishment name',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Color.fromARGB(255, 66, 66, 66),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -189,18 +232,18 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               ],
              ),
           
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-              Divider(
+              const Divider(
                 thickness: 2.0,
                 color: Colors.grey,
               ),
 
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Container(
-                padding: EdgeInsets.only(left: 20.0),
+                padding: const EdgeInsets.only(left: 20.0),
                 alignment: Alignment.centerLeft,
-                child: Text(
+                child: const Text(
                   'Pin a starting point',
                   style: TextStyle(
                     color: Colors.black,
@@ -209,20 +252,20 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               buildMap(),
               
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               if (_mapClicked)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.only(left: 20.0),
+                      padding: const EdgeInsets.only(left: 20.0),
                       alignment: Alignment.centerLeft,
-                      child: Text(
+                      child: const Text(
                         'What is this location called?',
                         style: TextStyle(
                           color: Colors.black,
@@ -231,26 +274,27 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                         ),
                       ),
                     ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                     Container(
-                      margin: EdgeInsets.only(right: 20.0, left: 20.0),
+                      margin: const EdgeInsets.only(right: 20.0, left: 20.0),
                       height: 37,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(5),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
+                            color: const Color(0xff1D1617).withOpacity(0.11),
                             blurRadius: 4,
                             spreadRadius: 0.0,
                           ),
                         ],
                       ),
                       child: TextField(
+                        controller: _locationNameController,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                           hintText: 'Type here...',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(5),
@@ -259,11 +303,11 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                         ),
                       ),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Container(
-                      padding: EdgeInsets.only(left: 20.0),
+                      padding: const EdgeInsets.only(left: 20.0),
                       alignment: Alignment.centerLeft,
-                      child: Text(
+                      child: const Text(
                         'What is the next step?',
                         style: TextStyle(
                           color: Colors.black,
@@ -276,7 +320,7 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          margin: EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
@@ -287,16 +331,16 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                               });
                              
                             },
-                            child: Text('Walk'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(131, 26),
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(131, 26),
                             ),
+                            child: const Text('Walk'),
                           ),
                         ),
                         Container(
-                          margin: EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
@@ -305,12 +349,12 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                                 rideClicked = true;
                               });
                             },
-                            child: Text('Ride'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(131, 26),
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(131, 26),
                             ),
+                            child: const Text('Ride'),
                           ),
                         ),
                       ],
@@ -335,9 +379,9 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
 
   AppBar appBar() {
     return AppBar(
-      title: Padding(
-        padding: const EdgeInsets.only(left: 16.0, top: 10),
-        child: const Text(
+      title: const Padding(
+        padding: EdgeInsets.only(left: 16.0, top: 10),
+        child: Text(
           'Create and suggest route',
           style: TextStyle(
             color: Colors.black,
@@ -371,8 +415,8 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               children: [
                   
                 Container(
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Choose Transportation Mode',
                     style: TextStyle(
                       color: Colors.black,
@@ -381,15 +425,15 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                     ),
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Container(
                   width: 363,
                   height: 64,
-                  margin: EdgeInsets.only(right: 20.0, left: 20.0),
+                  margin: const EdgeInsets.only(right: 20.0, left: 20.0),
                   
                   child: DropdownButton<String>(
                     value: selectedMode,
-                    hint: Text('Select Mode'),
+                    hint: const Text('Select Mode'),
                     onChanged: (String? newValue) {
                       setState(() {
                         selectedMode = newValue;
@@ -403,10 +447,10 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                     }).toList(),
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Container(
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Estimated Fare:',
                     style: TextStyle(
                       color: Colors.black,
@@ -415,27 +459,28 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                     ),
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
 
                 Container(
-            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xff1D1617).withOpacity(0.11),
+                  color: const Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
+              controller: _estiFareController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -444,10 +489,10 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               ),
             ),
           ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Container(
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Route',
                     style: TextStyle(
                       color: Colors.black,
@@ -459,7 +504,7 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                 Row (
                 children: [
                   Container(
-                    margin: EdgeInsets.all(10),
+                    margin: const EdgeInsets.all(10),
                     height: 33,
                     width: 149,
                     decoration: BoxDecoration(
@@ -467,17 +512,18 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xff1D1617).withOpacity(0.11),
+                          color: const Color(0xff1D1617).withOpacity(0.11),
                           blurRadius: 4,
                           spreadRadius: 0.0,
                         ),
                       ],
                     ),
                     child: TextField(
+                      controller: _fromRouteController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                         hintText: 'Type here...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -487,19 +533,19 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                     ),
                   ),
                   Container(
-                  margin: EdgeInsets.all(5),
+                  margin: const EdgeInsets.all(5),
                   alignment: Alignment.center,
-                  child: SvgPicture.asset('assets/icons/arrow.svg'),
                   height: 48.89,
                   width: 48.89,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
+                  child: SvgPicture.asset('assets/icons/arrow.svg'),
                 ),
 
                   Container(
-                    margin: EdgeInsets.all(10),
+                    margin: const EdgeInsets.all(10),
                     height: 33,
                     width: 149,
                     decoration: BoxDecoration(
@@ -507,17 +553,18 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xff1D1617).withOpacity(0.11),
+                          color: const Color(0xff1D1617).withOpacity(0.11),
                           blurRadius: 4,
                           spreadRadius: 0.0,
                         ),
                       ],
                     ),
                     child: TextField(
+                      controller: _toRouteController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                         hintText: 'Type here...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -529,11 +576,11 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                 
                 ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
 
                 Container(
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Where to stop:',
                     style: TextStyle(
                       color: Colors.black,
@@ -543,26 +590,27 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                   ),
                 ),
 
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Container(
-            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xff1D1617).withOpacity(0.11),
+                  color: const Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
+              controller: _stoplocationController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -572,11 +620,11 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
             ),
           ),
 
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
 
                 Container(
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'What is the next step?',
                     style: TextStyle(
                       color: Colors.black,
@@ -590,54 +638,54 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          margin: EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                              
+                              insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
                                walkWidgets.add(buildWalk());
                               });
                             },
-                            child: Text('Walk'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(120, 26),
                             ),
+                            child: const Text('Walk'),
                           ),
                         ),
                         Container(
-                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                
+                                insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
                                 rideWidgets.add(buildRide());
                               });
                             },
-                            child: Text('Ride'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(120, 26),
                             ),
+                            child: const Text('Ride'),
                           ),
                         ),
 
                         Container(
-                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
                               doneWidgets.add(buildDone());
                               });
                             },
-                            child: Text('Done'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(120, 26),
                             ),
+                            child: const Text('Done'),
                           ),
                         ),
                       ],
@@ -651,9 +699,9 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
       return Column(
         children: [
           Container(
-            padding: EdgeInsets.only(left: 20.0),
+            padding: const EdgeInsets.only(left: 20.0),
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: const Text(
               'Walk to:',
               style: TextStyle(
                 color: Colors.black,
@@ -662,26 +710,27 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               ),
             ),
           ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
                 Container(
-            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xff1D1617).withOpacity(0.11),
+                  color: const Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
+              controller: _walkToController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -690,11 +739,11 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
               ),
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Container(
-            padding: EdgeInsets.only(left: 20.0),
+            padding: const EdgeInsets.only(left: 20.0),
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: const Text(
               'What is the next step?',
               style: TextStyle(
                 color: Colors.black,
@@ -708,7 +757,7 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                margin: EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
@@ -716,45 +765,45 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
                       walkWidgets.add(buildWalk());
                     });
                   },
-                  child: Text('Walk'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: Color(0xff1F41BB),
-                    minimumSize: Size(120, 26),
+                    backgroundColor: const Color(0xff1F41BB),
+                    minimumSize: const Size(120, 26),
                   ),
+                  child: const Text('Walk'),
                 ),
               ),
               Container(
-                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
                       rideWidgets.add(buildRide());
                     });
                   },
-                  child: Text('Ride'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: Color(0xff1F41BB),
-                    minimumSize: Size(120, 26),
+                    backgroundColor: const Color(0xff1F41BB),
+                    minimumSize: const Size(120, 26),
                   ),
+                  child: const Text('Ride'),
                 ),
               ),
 
               Container(
-                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
                     doneWidgets.add(buildDone());
                     });
                   },
-                  child: Text('Done'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: Color(0xff1F41BB),
-                    minimumSize: Size(120, 26),
+                    backgroundColor: const Color(0xff1F41BB),
+                    minimumSize: const Size(120, 26),
                   ),
+                  child: const Text('Done'),
                 ),
               ),
             ],
@@ -768,8 +817,8 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
       return Column(
         children: [
            Container(
-              padding: EdgeInsets.only(left: 20.0),
-              child: Text(
+              padding: const EdgeInsets.only(left: 20.0),
+              child: const Text(
                 'Pin the end location:',
                 style: TextStyle(
                   color: Colors.black,
@@ -781,9 +830,9 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
           buildMap(),
 
            Container(
-            padding: EdgeInsets.only(left: 20.0),
-            child: Text(
-              'Whatis the location called?',
+            padding: const EdgeInsets.only(left: 20.0),
+            child: const Text(
+              'What is the location called?',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 12,
@@ -792,24 +841,25 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
             ),
           ),
           Container(
-            margin: EdgeInsets.only(right: 30.0),
+            margin: const EdgeInsets.only(right: 30.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xff1D1617).withOpacity(0.11),
+                  color: const Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
+              controller: _endLocNameController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -820,19 +870,27 @@ Future<void> _fetchPlaceDetails(LatLng position) async {
           ),
 
          Container(
-            margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+            margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
             child: ElevatedButton(
               onPressed: () {
-                setState(() {
-                  
-                });
+                var _location = _locationController.text;
+                var _locationAddress = _address;
+                var _locationName = _locationNameController.text;
+                var  _walkTo = _walkToController.text;
+                var _estiFare = _estiFareController.text;
+                var _stopLocation = _stoplocationController.text;
+                var _endLocation = _endLocController.text;
+                var _endLocationName = _endLocNameController.text;
+                var _toRoute = _toRouteController.text;
+                var _fromRoute = _fromRouteController.text;
+
               },
-              child: Text('Submit & Save'),
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,
-                backgroundColor: Color(0xff1F41BB),
-                minimumSize: Size(227, 26),
+                backgroundColor: const Color(0xff1F41BB),
+                minimumSize: const Size(227, 26),
               ),
+              child: const Text('Submit & Save'),
             ),
           ),
 
