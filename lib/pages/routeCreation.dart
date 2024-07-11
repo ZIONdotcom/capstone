@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class Routecreation extends StatefulWidget {
   const Routecreation({super.key});
@@ -25,6 +29,76 @@ class _MyWidgetState extends State<Routecreation> {
   List<Widget> walkWidgets = [];
   List<Widget> rideWidgets = [];
   List<Widget> doneWidgets =[];
+
+  GoogleMapController? _controller;
+  Marker? _selectedMarker;
+  String _locationName = "";
+  TextEditingController _locationController = TextEditingController();
+  TextEditingController _addressController = TextEditingController();
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+     _addressController.dispose();
+    super.dispose();
+  }
+  
+  String _address = '';
+  String _establishmentName = '';
+
+
+Future<void> _onMapTap(LatLng position) async {
+  List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  
+  if (placemarks.isNotEmpty) {
+    Placemark placemark = placemarks[0];
+    String name = placemark.name ?? "";
+    String address = "${placemark.street ?? ""}, ${placemark.locality ?? ""}, ${placemark.administrativeArea ?? ""}, ${placemark.country ?? ""}";
+
+    setState(() {
+      _selectedMarker = Marker(
+        markerId: MarkerId('selected-location'),
+        position: position,
+        infoWindow: InfoWindow(title: name),
+      );
+      _mapClicked = true;
+      _locationController.text = name;
+      _addressController.text = address;
+      _address = address;
+
+      // Fetch establishment name
+      _fetchPlaceDetails(position);
+    });
+  }
+}
+
+Future<void> _fetchPlaceDetails(LatLng position) async {
+  const apiKey = 'YOUR_GOOGLE_PLACES_API_KEY';
+  final url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+      '?location=${position.latitude},${position.longitude}&radius=500'
+      '&keyword=church|coffee shop|mall|establishment'
+      '&key=$apiKey';
+
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    final results = data['results'] as List<dynamic>;
+    if (results.isNotEmpty) {
+      final establishment = results[0];
+      final name = establishment['name'];
+      setState(() {
+        _establishmentName = name;
+      });
+    } else {
+      setState(() {
+        _establishmentName = 'No nearby establishment found';
+      });
+    }
+  } else {
+    throw Exception('Failed to load place details');
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +140,7 @@ class _MyWidgetState extends State<Routecreation> {
                         ],
                       ),
                       child: TextField(
+                        controller: _locationController,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -82,14 +157,44 @@ class _MyWidgetState extends State<Routecreation> {
                 ],
               ),
 
+             if(_mapClicked)
+             Column(
+              children: [
+                  Container(
+                    padding: EdgeInsets.only(left: 20.0),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _address,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
 
+                  Container(
+                    padding: EdgeInsets.only(left: 20.0),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'establishment name',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+              ],
+             ),
+          
               SizedBox(height: 10),
 
               Divider(
                 thickness: 2.0,
                 color: Colors.grey,
               ),
-
 
               SizedBox(height: 10),
               Container(
@@ -219,8 +324,7 @@ class _MyWidgetState extends State<Routecreation> {
                 ...walkWidgets, 
               ...rideWidgets,
               ...doneWidgets,
-
-                 
+ 
             ],
           ),
         ),
@@ -248,246 +352,241 @@ class _MyWidgetState extends State<Routecreation> {
   }
 
    Widget buildMap() {
-            return Container(
-              height: 300, // Set a height for the map container
-              child: GoogleMap(
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                initialCameraPosition: _initialCameraPosition,
-                onTap: (LatLng position) {
-                  setState(() {
-                    _mapClicked = true;
-                  });
-                },
-                onMapCreated: (GoogleMapController controller) {
-                  // Add additional map setup or controllers here
-                },
-              ),
-            );
-    }
+    return SizedBox(
+      height: 400,
+      child: GoogleMap(
+        initialCameraPosition: _initialCameraPosition,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled: false,
+        onMapCreated: (controller) => _controller = controller,
+        markers: _selectedMarker != null ? {_selectedMarker!} : {},
+        onTap: _onMapTap,
+      ),
+    );
+  }
 
     Widget buildRide(){
-      return     Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                           
-                          Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Choose Transportation Mode',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Container(
-                            width: 363,
-                            height: 64,
-                            margin: EdgeInsets.only(right: 20.0, left: 20.0),
-                            
-                            child: DropdownButton<String>(
-                              value: selectedMode,
-                              hint: Text('Select Mode'),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  selectedMode = newValue;
-                                });
-                              },
-                              items: modes.map((String mode) {
-                                return DropdownMenuItem<String>(
-                                  value: mode,
-                                  child: Text(mode),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                            SizedBox(height: 10),
-                          Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Estimated Fare:',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                            SizedBox(height: 10),
+      return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                  
+                Container(
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    'Choose Transportation Mode',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Container(
+                  width: 363,
+                  height: 64,
+                  margin: EdgeInsets.only(right: 20.0, left: 20.0),
+                  
+                  child: DropdownButton<String>(
+                    value: selectedMode,
+                    hint: Text('Select Mode'),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedMode = newValue;
+                      });
+                    },
+                    items: modes.map((String mode) {
+                      return DropdownMenuItem<String>(
+                        value: mode,
+                        child: Text(mode),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Container(
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    'Estimated Fare:',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10),
 
-                          Container(
-                      margin: EdgeInsets.only(right: 20.0, left: 20.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
+                Container(
+            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            height: 37,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xff1D1617).withOpacity(0.11),
+                  blurRadius: 4,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                hintText: 'Type here...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+                SizedBox(height: 10),
+                Container(
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    'Route',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Row (
+                children: [
+                  Container(
+                    margin: EdgeInsets.all(10),
+                    height: 33,
+                    width: 149,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xff1D1617).withOpacity(0.11),
+                          blurRadius: 4,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        hintText: 'Type here...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                          SizedBox(height: 10),
-                          Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Route',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                         Row (
-                          children: [
-                            Container(
-                              margin: EdgeInsets.all(10),
-                              height: 33,
-                              width: 149,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0xff1D1617).withOpacity(0.11),
-                                    blurRadius: 4,
-                                    spreadRadius: 0.0,
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                                  hintText: 'Type here...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                            ),
-                           Container(
-                            margin: EdgeInsets.all(5),
-                            alignment: Alignment.center,
-                            child: SvgPicture.asset('assets/icons/arrow.svg'),
-                            height: 48.89,
-                            width: 48.89,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
+                  ),
+                  Container(
+                  margin: EdgeInsets.all(5),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset('assets/icons/arrow.svg'),
+                  height: 48.89,
+                  width: 48.89,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
 
-                           Container(
-                              margin: EdgeInsets.all(10),
-                              height: 33,
-                              width: 149,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0xff1D1617).withOpacity(0.11),
-                                    blurRadius: 4,
-                                    spreadRadius: 0.0,
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                                  hintText: 'Type here...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          
-                          ],
-                         ),
-                         SizedBox(height: 10),
-
-                         Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Where to stop:',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: 10),
-                          Container(
-                      margin: EdgeInsets.only(right: 20.0, left: 20.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
+                  Container(
+                    margin: EdgeInsets.all(10),
+                    height: 33,
+                    width: 149,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xff1D1617).withOpacity(0.11),
+                          blurRadius: 4,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        hintText: 'Type here...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide.none,
                         ),
                       ),
                     ),
+                  ),
+                
+                ],
+                ),
+                SizedBox(height: 10),
 
-                    SizedBox(height: 10),
+                Container(
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    'Where to stop:',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
 
-                           Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'What is the next step?',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      
-                      Row(
+                SizedBox(height: 10),
+                Container(
+            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            height: 37,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xff1D1617).withOpacity(0.11),
+                  blurRadius: 4,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                hintText: 'Type here...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+
+                SizedBox(height: 10),
+
+                Container(
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    'What is the next step?',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            
+                Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
@@ -515,7 +614,6 @@ class _MyWidgetState extends State<Routecreation> {
                                 
                                 rideWidgets.add(buildRide());
                               });
-                             
                             },
                             child: Text('Ride'),
                             style: ElevatedButton.styleFrom(
@@ -531,7 +629,6 @@ class _MyWidgetState extends State<Routecreation> {
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                
                               doneWidgets.add(buildDone());
                               });
                             },
@@ -545,131 +642,124 @@ class _MyWidgetState extends State<Routecreation> {
                         ),
                       ],
                     ),
-
-                         
-                        ],
-                      );
-                    
+              
+            ],
+          );              
     }
 
     Widget buildWalk(){
       return Column(
         children: [
-                    Container(
-                      padding: EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Walk to:',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                     SizedBox(height: 10),
-                          Container(
-                      margin: EdgeInsets.only(right: 20.0, left: 20.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Container(
-                      padding: EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'What is the next step?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+          Container(
+            padding: EdgeInsets.only(left: 20.0),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Walk to:',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+            SizedBox(height: 10),
+                Container(
+            margin: EdgeInsets.only(right: 20.0, left: 20.0),
+            height: 37,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xff1D1617).withOpacity(0.11),
+                  blurRadius: 4,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                hintText: 'Type here...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 10),
+          Container(
+            padding: EdgeInsets.only(left: 20.0),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'What is the next step?',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
                     
+            Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                margin: EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      
+                      walkWidgets.add(buildWalk());
+                    });
+                  },
+                  child: Text('Walk'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
+                  ),
+                ),
+              ),
+              Container(
+                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      rideWidgets.add(buildRide());
+                    });
+                  },
+                  child: Text('Ride'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
+                  ),
+                ),
+              ),
 
-                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          margin: EdgeInsets.only(left: 20, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                               
-                                walkWidgets.add(buildWalk());
-                              });
-                            },
-                            child: Text('Walk'),
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                 
-                                rideWidgets.add(buildRide());
-                              });
-                             
-                            },
-                            child: Text('Ride'),
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
-                            ),
-                          ),
-                        ),
-
-                        Container(
-                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                 
-                              doneWidgets.add(buildDone());
-                              });
-                            },
-                            child: Text('Done'),
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-        
+              Container(
+                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                    doneWidgets.add(buildDone());
+                    });
+                  },
+                  child: Text('Done'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
+                  ),
+                ),
+              ),
+            ],
+          ),
+    
         ],
       );
     }
@@ -678,73 +768,73 @@ class _MyWidgetState extends State<Routecreation> {
       return Column(
         children: [
            Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Pin the end location:',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+              padding: EdgeInsets.only(left: 20.0),
+              child: Text(
+                'Pin the end location:',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           buildMap(),
 
            Container(
-                            padding: EdgeInsets.only(left: 20.0),
-                            child: Text(
-                              'Whatis the location called?',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+            padding: EdgeInsets.only(left: 20.0),
+            child: Text(
+              'Whatis the location called?',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           Container(
-                      margin: EdgeInsets.only(right: 30.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
+            margin: EdgeInsets.only(right: 30.0),
+            height: 37,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xff1D1617).withOpacity(0.11),
+                  blurRadius: 4,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                hintText: 'Type here...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
 
          Container(
-                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                
-                              });
-                            },
-                            child: Text('Submit & Save'),
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(227, 26),
-                            ),
-                          ),
-                        ),
+            margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  
+                });
+              },
+              child: Text('Submit & Save'),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Color(0xff1F41BB),
+                minimumSize: Size(227, 26),
+              ),
+            ),
+          ),
 
         ],
       );

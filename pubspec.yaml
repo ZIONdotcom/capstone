@@ -35,7 +35,8 @@ dependencies:
   cupertino_icons: ^1.0.6
   flutter_svg: ^2.0.10+1
   dio: ^4.0.0
- 
+  geocoding: ^2.0.4
+  http: 1.2.1
 
 dev_dependencies:
   flutter_test:
