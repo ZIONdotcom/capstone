@@ -1,12 +1,13 @@
-import 'dart:collection';
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:google_maps_webservice/places.dart';
+import 'package:googleapis/places/v1.dart' as places;
 import 'package:google_maps_webservice/places.dart' as places;
+import 'package:googleapis_auth/auth_io.dart';
 
 
 class Routecreation extends StatefulWidget {
@@ -36,34 +37,302 @@ class _MyWidgetState extends State<Routecreation> {
   final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI'; // Replace with your actual API key
   late final GoogleMapsPlaces _places;
 
+   GoogleMapController? _controller;
+  Marker? _selectedMarker;
+  String _locationName = "";
+  TextEditingController _locationController = TextEditingController();
+  TextEditingController _addressController = TextEditingController();
+  TextEditingController _searchController = TextEditingController(); // Controller for the search bar
+  bool _showSearchBar = false; // New state for showing/hiding the search bar
+  String _address = '';
+  String _establishmentName = '';
+  bool submitClicked = false;
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: appBar(),
+      body: Padding(
+        padding: const EdgeInsets.only(left: 10, right: 0, top: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+             
+             Row(
+              children: [
+                Container(
+                  margin: EdgeInsets.all(5),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset('assets/icons/from.svg'),
+                  height: 48.89,
+                  width: 48.89,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(right: 30.0),
+                    height: 37,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xff1D1617).withOpacity(0.11),
+                          blurRadius: 4,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _locationController,
+                      onTap: () {
+                        setState(() {
+                          _showSearchBar = true; 
+                          submitClicked = false;
+                        });
+                      },
+                      onSubmitted: (query) {
+                        _searchPlaces(query);
+                        submitClicked = true;
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        hintText: 'Search for places...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide.none,
+                        ),
+                        suffixIcon: _showSearchBar
+                            ? IconButton(
+                                icon: Icon(Icons.cancel),
+                                onPressed: () {
+                                  setState(() {
+                                    _showSearchBar = false;
+                                    _searchController.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+
+             
+
+             if(_mapClicked || submitClicked )
+             Column(
+              children: [
+                  Container(
+                    padding: EdgeInsets.only(left: 20.0),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _address,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  Container(
+                    padding: EdgeInsets.only(left: 20.0),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'establishment name',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+              ],
+             ),
+          
+              SizedBox(height: 10),
+
+              Divider(
+                thickness: 2.0,
+                color: Colors.grey,
+              ),
+
+              SizedBox(height: 10),
+              Container(
+                padding: EdgeInsets.only(left: 10.0),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Pin a starting point',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+
+              buildMap(),
+              
+              SizedBox(height: 20),
+
+              if (_mapClicked)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.only(left: 10.0),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'What is this location called?',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                      SizedBox(height: 10),
+
+                    Container(
+                      margin: EdgeInsets.only(right: 20.0, left: 10.0),
+                      height: 37,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xff1D1617).withOpacity(0.11),
+                            blurRadius: 4,
+                            spreadRadius: 0.0,
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                          hintText: 'Type here...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(5),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(height: 20),
+                    Container(
+                      padding: EdgeInsets.only(left: 10.0),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'What is the next step?',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          margin: EdgeInsets.only(left: 10, right: 5, top: 10, bottom: 10),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                // walkWidgets.add(buildWalk());
+                                rideClicked = false; 
+                                walkClicked = true;
+                               
+                              });
+                             
+                            },
+                            child: Text('Walk'),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: Color(0xff1F41BB),
+                              minimumSize: Size(131, 26),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          margin: EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                walkClicked = false;
+                                // rideWidgets.add(buildWalk());
+                                rideClicked = true;
+                              });
+                            },
+                            child: Text('Ride'),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: Color(0xff1F41BB),
+                              minimumSize: Size(131, 26),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  
+                  ],
+                ),
+            
+              if (rideClicked) buildRide(),
+              if (walkClicked) buildWalk(),
+                ...walkWidgets, 
+              ...rideWidgets,
+              ...doneWidgets,
+ 
+            ],
+          ),
+        ),
+      ),
+      backgroundColor: Colors.white,
+    );
+  }
+
+  AppBar appBar() {
+    return AppBar(
+      title: Padding(
+        padding: const EdgeInsets.only(left: 16.0, top: 10),
+        child: const Text(
+          'Create and suggest route',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      elevation: 0.0,
+    );
+  }
+
+  
   @override
   void initState() {
     super.initState();
     _places = GoogleMapsPlaces(apiKey: apiKey); // Initialize _places with the API key
   }
-
-
-  Map<String,HashSet>steps = HashMap();
-  
-
-   GoogleMapController? _controller;
-  Marker? _selectedMarker;
-  final String _locationName = "";
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController(); // Controller for the search bar
-  bool _showSearchBar = false; // New state for showing/hiding the search bar
-  String _address = '';
-  String _establishmentName = '';
-  bool submitClicked = false;
-  final TextEditingController _locationNameController = TextEditingController();
-  final TextEditingController _walkToController = TextEditingController();
-  final TextEditingController _estiFareController = TextEditingController();
-  final TextEditingController _stoplocationController = TextEditingController();
-  final TextEditingController _endLocController = TextEditingController();
-  final TextEditingController _endLocNameController = TextEditingController();
-   final TextEditingController _toRouteController = TextEditingController();
-    final TextEditingController _fromRouteController = TextEditingController();
 
   @override
   void dispose() {
@@ -73,37 +342,6 @@ class _MyWidgetState extends State<Routecreation> {
     super.dispose();
   }
   
-  String _address = '';
-  String _establishmentName = '';
-  final int _stepNumber= 0;
-
-
-  //Hashsets that will gather data
-  final locationDetails = HashSet();
-  final walkDetails = HashSet<String>();
-  final rideDetails = HashSet<String>();
-
-  //method to use in storing data
-  void insertLocationDetails(String address, String latLang, String name){
-    locationDetails.addAll({address,latLang,name});
-    String step = 'Step' '$_stepNumber';
-    insertDataintoMap(step, locationDetails);
-  } 
-  void insertWalkDetails(String walkTo){
-    walkDetails.addAll({'Walk',walkTo});
-    String step = 'Step' '$_stepNumber'; 
-    insertDataintoMap(step, walkDetails);
-  }
-   insertRideDetails(String transpoMode,String fare, String fromRoute, String toRoute,String stopLoc){
-    rideDetails.addAll({'Ride',transpoMode,fare,fromRoute,toRoute,stopLoc});
-    String step = 'Step' '$_stepNumber'; 
-    insertDataintoMap(step, rideDetails);
-  }
-  void insertDataintoMap(String step,HashSet details){
-    steps.addAll({step: details});
-
-  }
-
 
   Future<void> _onMapTap(LatLng position) async {
   List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
@@ -115,7 +353,7 @@ class _MyWidgetState extends State<Routecreation> {
 
       setState(() {
         _selectedMarker = Marker(
-          markerId: const MarkerId('selected-location'),
+          markerId: MarkerId('selected-location'),
           position: position,
           infoWindow: InfoWindow(title: name),
         );
@@ -161,9 +399,6 @@ class _MyWidgetState extends State<Routecreation> {
 }
 
 
-
-
-
 void _searchPlaces(String query) async {
   final response = await _places.searchByText(query);
 
@@ -173,7 +408,7 @@ void _searchPlaces(String query) async {
 
     setState(() {
       _selectedMarker = Marker(
-        markerId: const MarkerId('search-location'),
+        markerId: MarkerId('search-location'),
         position: location,
         infoWindow: InfoWindow(title: place.name),
       );
@@ -183,7 +418,8 @@ void _searchPlaces(String query) async {
        _locationController.text = place.formattedAddress ?? ''; // Show the selected address in the TextField
         _address = place.formattedAddress ?? ''; // Update the _address with the selected address
 
-        // Fetch establishment name for the searched location
+        _currentCameraPosition = CameraPosition(target: location, zoom: 14);
+
         _fetchPlaceDetails(location);
     });
 
@@ -205,299 +441,24 @@ void _searchPlaces(String query) async {
 }
 
 
+CameraPosition _currentCameraPosition = _initialCameraPosition;
 
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: appBar(),
-      body: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 0, top: 10),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-             
-             Row(
-              children: [
-                Container(
-                  margin: const EdgeInsets.all(5),
-                  alignment: Alignment.center,
-                  height: 48.89,
-                  width: 48.89,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: SvgPicture.asset('assets/icons/from.svg'),
-                ),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 30.0),
-                    height: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
-                          blurRadius: 4,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _locationController,
-                      onTap: () {
-                        setState(() {
-                          _showSearchBar = true; 
-                          submitClicked = false;
-                        });
-                      },
-                      onSubmitted: (query) {
-                        _searchPlaces(query);
-                        submitClicked = true;
-                      },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                        hintText: 'Search for places...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide.none,
-                        ),
-                        suffixIcon: _showSearchBar
-                            ? IconButton(
-                                icon: const Icon(Icons.cancel),
-                                onPressed: () {
-                                  setState(() {
-                                    _showSearchBar = false;
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-
-             
-
-             if(_mapClicked || submitClicked )
-             Column(
-              children: [
-                  Container(
-                    padding: const EdgeInsets.only(left: 20.0),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _address,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.only(left: 20.0),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'establishment name',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 66, 66, 66),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-              ],
-             ),
-          
-              const SizedBox(height: 10),
-
-              const Divider(
-                thickness: 2.0,
-                color: Colors.grey,
-              ),
-
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.only(left: 20.0),
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  'Pin a starting point',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              buildMap(),
-              
-              const SizedBox(height: 20),
-
-              if (_mapClicked)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is this location called?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                      const SizedBox(height: 10),
-                    Container(
-                      margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _locationNameController,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is the next step?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                // walkWidgets.add(buildWalk());
-                                rideClicked = false; 
-                                walkClicked = true;
-                               
-                              });
-                             
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
-                            ),
-                            child: const Text('Walk'),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                walkClicked = false;
-                                // rideWidgets.add(buildWalk());
-                                rideClicked = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
-                            ),
-                            child: const Text('Ride'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  
-                  ],
-                ),
-            
-              if (rideClicked) buildRide(),
-              if (walkClicked) buildWalk(),
-                ...walkWidgets, 
-              ...rideWidgets,
-              ...doneWidgets,
- 
-            ],
-          ),
-        ),
+Widget buildMap() {
+    return Container(
+      width: double.infinity,
+      height: 200,
+      child: GoogleMap(
+        initialCameraPosition: _currentCameraPosition,
+        onMapCreated: (controller) {
+          _controller = controller;
+        },
+        onTap: (LatLng latLng) {
+          // Handle map tap if necessary
+        },
+        markers: _selectedMarker != null ? {_selectedMarker!} : {},
       ),
-      backgroundColor: Colors.white,
     );
   }
-
-  AppBar appBar() {
-    return AppBar(
-      title: const Padding(
-        padding: EdgeInsets.only(left: 16.0, top: 10),
-        child: Text(
-          'Create and suggest route',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      backgroundColor: Colors.white,
-      elevation: 0.0,
-    );
-  }
-
-   Widget buildMap() {
-  return SizedBox(
-    width: double.infinity,
-    height: 200,
-    child: GoogleMap(
-      initialCameraPosition: _initialCameraPosition,
-      onMapCreated: (controller) {
-        _controller = controller;
-      },
-      onTap: _onMapTap,
-      markers: _selectedMarker != null ? {_selectedMarker!} : {},
-    ),
-  );
-}
 
 
     Widget buildRide(){
@@ -506,8 +467,8 @@ void _searchPlaces(String query) async {
               children: [
                   
                 Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
                     'Choose Transportation Mode',
                     style: TextStyle(
                       color: Colors.black,
@@ -516,15 +477,15 @@ void _searchPlaces(String query) async {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Container(
                   width: 363,
                   height: 64,
-                  margin: const EdgeInsets.only(right: 20.0, left: 20.0),
+                  margin: EdgeInsets.only(right: 20.0, left: 10.0),
                   
                   child: DropdownButton<String>(
                     value: selectedMode,
-                    hint: const Text('Select Mode'),
+                    hint: Text('Select Mode'),
                     onChanged: (String? newValue) {
                       setState(() {
                         selectedMode = newValue;
@@ -538,10 +499,10 @@ void _searchPlaces(String query) async {
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
                     'Estimated Fare:',
                     style: TextStyle(
                       color: Colors.black,
@@ -550,40 +511,39 @@ void _searchPlaces(String query) async {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-            height: 37,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
+                  margin: EdgeInsets.only(right: 20.0, left: 10.0),
+                  height: 37,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xff1D1617).withOpacity(0.11),
+                        blurRadius: 4,
+                        spreadRadius: 0.0,
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                      hintText: 'Type here...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: TextField(
-              controller: _estiFareController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                hintText: 'Type here...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
                     'Route',
                     style: TextStyle(
                       color: Colors.black,
@@ -595,7 +555,7 @@ void _searchPlaces(String query) async {
                 Row (
                 children: [
                   Container(
-                    margin: const EdgeInsets.all(10),
+                    margin: EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
                     height: 33,
                     width: 149,
                     decoration: BoxDecoration(
@@ -603,18 +563,17 @@ void _searchPlaces(String query) async {
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
+                          color: Color(0xff1D1617).withOpacity(0.11),
                           blurRadius: 4,
                           spreadRadius: 0.0,
                         ),
                       ],
                     ),
                     child: TextField(
-                      controller: _fromRouteController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                         hintText: 'Type here...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -624,19 +583,18 @@ void _searchPlaces(String query) async {
                     ),
                   ),
                   Container(
-                  margin: const EdgeInsets.all(5),
                   alignment: Alignment.center,
+                  child: SvgPicture.asset('assets/icons/arrow.svg'),
                   height: 48.89,
                   width: 48.89,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: SvgPicture.asset('assets/icons/arrow.svg'),
                 ),
 
                   Container(
-                    margin: const EdgeInsets.all(10),
+                    margin: EdgeInsets.all(10),
                     height: 33,
                     width: 149,
                     decoration: BoxDecoration(
@@ -644,18 +602,17 @@ void _searchPlaces(String query) async {
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
+                          color: Color(0xff1D1617).withOpacity(0.11),
                           blurRadius: 4,
                           spreadRadius: 0.0,
                         ),
                       ],
                     ),
                     child: TextField(
-                      controller: _toRouteController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                         hintText: 'Type here...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -667,11 +624,11 @@ void _searchPlaces(String query) async {
                 
                 ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
                     'Where to stop:',
                     style: TextStyle(
                       color: Colors.black,
@@ -681,27 +638,26 @@ void _searchPlaces(String query) async {
                   ),
                 ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
+            margin: EdgeInsets.only(right: 20.0, left: 10.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
+                  color: Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
-              controller: _stoplocationController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -711,11 +667,11 @@ void _searchPlaces(String query) async {
             ),
           ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
                     'What is the next step?',
                     style: TextStyle(
                       color: Colors.black,
@@ -729,54 +685,54 @@ void _searchPlaces(String query) async {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                          margin: EdgeInsets.only(left: 15, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                              insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
+                              
                                walkWidgets.add(buildWalk());
                               });
                             },
+                            child: Text('Walk'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
+                              backgroundColor: Color(0xff1F41BB),
+                              minimumSize: Size(120, 26),
                             ),
-                            child: const Text('Walk'),
                           ),
                         ),
                         Container(
-                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
+                                
                                 rideWidgets.add(buildRide());
                               });
                             },
+                            child: Text('Ride'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
+                              backgroundColor: Color(0xff1F41BB),
+                              minimumSize: Size(120, 26),
                             ),
-                            child: const Text('Ride'),
                           ),
                         ),
 
                         Container(
-                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                          margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
                               doneWidgets.add(buildDone());
                               });
                             },
+                            child: Text('Done'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
+                              backgroundColor: Color(0xff1F41BB),
+                              minimumSize: Size(120, 26),
                             ),
-                            child: const Text('Done'),
                           ),
                         ),
                       ],
@@ -790,9 +746,9 @@ void _searchPlaces(String query) async {
       return Column(
         children: [
           Container(
-            padding: const EdgeInsets.only(left: 20.0),
+            padding: EdgeInsets.only(left: 10.0),
             alignment: Alignment.centerLeft,
-            child: const Text(
+            child: Text(
               'Walk to:',
               style: TextStyle(
                 color: Colors.black,
@@ -801,27 +757,26 @@ void _searchPlaces(String query) async {
               ),
             ),
           ),
-            const SizedBox(height: 10),
-                Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
+            SizedBox(height: 10),
+            Container(
+            margin: EdgeInsets.only(right: 20.0, left: 10.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
+                  color: Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
-              controller: _walkToController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -830,11 +785,11 @@ void _searchPlaces(String query) async {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.only(left: 20.0),
+            padding: EdgeInsets.only(left: 10.0),
             alignment: Alignment.centerLeft,
-            child: const Text(
+            child: Text(
               'What is the next step?',
               style: TextStyle(
                 color: Colors.black,
@@ -848,7 +803,7 @@ void _searchPlaces(String query) async {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                margin: EdgeInsets.only(left: 20, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
@@ -856,45 +811,45 @@ void _searchPlaces(String query) async {
                       walkWidgets.add(buildWalk());
                     });
                   },
+                  child: Text('Walk'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
                   ),
-                  child: const Text('Walk'),
                 ),
               ),
               Container(
-                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
                       rideWidgets.add(buildRide());
                     });
                   },
+                  child: Text('Ride'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
                   ),
-                  child: const Text('Ride'),
                 ),
               ),
 
               Container(
-                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
+                margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
                     doneWidgets.add(buildDone());
                     });
                   },
+                  child: Text('Done'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
+                    backgroundColor: Color(0xff1F41BB),
+                    minimumSize: Size(120, 26),
                   ),
-                  child: const Text('Done'),
                 ),
               ),
             ],
@@ -908,8 +863,9 @@ void _searchPlaces(String query) async {
       return Column(
         children: [
            Container(
-              padding: const EdgeInsets.only(left: 20.0),
-              child: const Text(
+              padding: EdgeInsets.only(left: 10.0),
+              alignment: Alignment.centerLeft,
+              child: Text(
                 'Pin the end location:',
                 style: TextStyle(
                   color: Colors.black,
@@ -918,11 +874,14 @@ void _searchPlaces(String query) async {
                 ),
               ),
             ),
+             SizedBox(height: 10),
           buildMap(),
 
+           SizedBox(height: 10),
            Container(
-            padding: const EdgeInsets.only(left: 20.0),
-            child: const Text(
+            padding: EdgeInsets.only(left: 10.0),
+            alignment: Alignment.centerLeft,
+            child: Text(
               'What is the location called?',
               style: TextStyle(
                 color: Colors.black,
@@ -931,26 +890,26 @@ void _searchPlaces(String query) async {
               ),
             ),
           ),
+           SizedBox(height: 10),
           Container(
-            margin: const EdgeInsets.only(right: 30.0),
+            margin: EdgeInsets.only(right: 30.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
+                  color: Color(0xff1D1617).withOpacity(0.11),
                   blurRadius: 4,
                   spreadRadius: 0.0,
                 ),
               ],
             ),
             child: TextField(
-              controller: _endLocNameController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 hintText: 'Type here...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(5),
@@ -960,28 +919,21 @@ void _searchPlaces(String query) async {
             ),
           ),
 
+           SizedBox(height: 10),
          Container(
-            margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
+            margin: EdgeInsets.only(left: 5, top: 10, bottom: 10),
             child: ElevatedButton(
               onPressed: () {
-                var location = _locationController.text;
-                var locationAddress = _address;
-                var locationName = _locationNameController.text;
-                var  walkTo = _walkToController.text;
-                var estiFare = _estiFareController.text;
-                var stopLocation = _stoplocationController.text;
-                var endLocation = _endLocController.text;
-                var endLocationName = _endLocNameController.text;
-                var toRoute = _toRouteController.text;
-                var fromRoute = _fromRouteController.text;
-
+                setState(() {
+                  
+                });
               },
+              child: Text('Submit & Save'),
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,
-                backgroundColor: const Color(0xff1F41BB),
-                minimumSize: const Size(227, 26),
+                backgroundColor: Color(0xff1F41BB),
+                minimumSize: Size(227, 26),
               ),
-              child: const Text('Submit & Save'),
             ),
           ),
 
