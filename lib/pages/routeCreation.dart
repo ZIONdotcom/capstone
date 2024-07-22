@@ -1,7 +1,4 @@
 // ignore: file_names
-import 'dart:collection';
-import 'package:eosdart/eosdart.dart' as eos;
-import 'dart:ffi' hide Size;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -142,7 +139,7 @@ class _MyWidgetState extends State<Routecreation> {
   final TextEditingController _searchController = TextEditingController(); // Controller for the search bar
   bool _showSearchBar = false; // New state for showing/hiding the search bar
   String _address = '';
-  String _endAddress = '';
+  final String _endAddress = '';
   String _establishmentName = '';
   bool submitClicked = false;
  /* final TextEditingController _locationNameController = TextEditingController();
