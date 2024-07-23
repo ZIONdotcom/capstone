@@ -1,5 +1,6 @@
 import 'package:capstone/pages/routeFinder.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone/pages/routeCreation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins'),
-      home:  RouteFinder()
+      home:  Routecreation()
     );
   }
 }
