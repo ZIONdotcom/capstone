@@ -14,7 +14,6 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:google_maps_webservice/places.dart' as places;
 
 import 'package:google_maps_webservice/places.dart';
-import 'package:googleapis/places/v1.dart' as places;
 import 'package:google_maps_webservice/places.dart' as places;
 
 
@@ -158,6 +157,7 @@ class _MyWidgetState extends State<Routecreation> {
    GoogleMapController? _controller;
 
   Marker? _selectedMarker;
+  final String _locationName = "";
    final int _stepNumber= 0;
   //final //final String _locationName = "";
   final  TextEditingController _locationController = TextEditingController();
@@ -372,6 +372,143 @@ void _searchPlaces(String query) async {
   }
 }
 }
+ 
+  final TextEditingController _walkToController = TextEditingController();
+  final TextEditingController _estiFareController = TextEditingController();
+  final TextEditingController _stoplocationController = TextEditingController();
+  final TextEditingController _endLocController = TextEditingController();
+ 
+   final TextEditingController _toRouteController = TextEditingController();
+    final TextEditingController _fromRouteController = TextEditingController();
+
+
+
+
+
+
+  //method to use in storing data
+  void insertLocationDetails(String address, String latLang, String name){
+    locationDetails.addAll({address,latLang,name});
+    String step = 'Step' '$_stepNumber';
+    insertDataintoMap(step, locationDetails);
+  } 
+  void insertWalkDetails(String walkTo){
+    walkDetails.addAll({'Walk',walkTo});
+    String step = 'Step' '$_stepNumber'; 
+    insertDataintoMap(step, walkDetails);
+  }
+   insertRideDetails(String transpoMode,String fare, String fromRoute, String toRoute,String stopLoc){
+    rideDetails.addAll({'Ride',transpoMode,fare,fromRoute,toRoute,stopLoc});
+    String step = 'Step' '$_stepNumber'; 
+    insertDataintoMap(step, rideDetails);
+  }
+  void insertDataintoMap(String step,HashSet details){
+    steps.addAll({step: details});
+
+  }
+
+
+  Future<void> _onMapTap(LatLng position) async {
+  List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
+    if (placemarks.isNotEmpty) {
+      Placemark placemark = placemarks[0];
+      String name = placemark.name ?? "";
+      String address = "${placemark.street ?? ""}, ${placemark.locality ?? ""}, ${placemark.administrativeArea ?? ""}, ${placemark.country ?? ""}";
+
+      setState(() {
+        _selectedMarker = Marker(
+          markerId: const MarkerId('selected-location'),
+          position: position,
+          infoWindow: InfoWindow(title: name),
+        );
+        _mapClicked = true;
+        _locationController.text = name;
+        _addressController.text = address;
+        _address = address;
+
+        // Fetch establishment name
+        _fetchPlaceDetails(position);
+      });
+    }
+  }
+
+
+ Future<void> _fetchPlaceDetails(LatLng position) async {
+  // Create an instance of the Location class from google_maps_webservice
+  final location = places.Location(
+    lat: position.latitude,
+    lng: position.longitude,
+  );
+
+  // Fetch nearby places using the nearbySearch method
+  final response = await _places.searchNearbyWithRadius(
+    location,
+    500, // Radius in meters
+    type: 'establishment',
+    keyword: 'church|coffee shop|mall|establishment',
+  );
+
+  // Check the response and update state
+  if (response.status == 'OK' && response.results.isNotEmpty) {
+    final establishment = response.results.first;
+    final name = establishment.name;
+    setState(() {
+      _establishmentName = name;
+    });
+  } else {
+    setState(() {
+      _establishmentName = 'No nearby establishment found';
+    });
+  }
+}
+
+
+
+
+
+void _searchPlaces(String query) async {
+  final response = await _places.searchByText(query);
+
+  if (response.status == 'OK' && response.results.isNotEmpty) {
+    final place = response.results.first;
+    final location = LatLng(place.geometry?.location.lat ?? 0.0, place.geometry?.location.lng ?? 0.0);
+
+    setState(() {
+      _selectedMarker = Marker(
+        markerId: const MarkerId('search-location'),
+        position: location,
+        infoWindow: InfoWindow(title: place.name),
+      );
+      _controller?.animateCamera(CameraUpdate.newLatLng(location));
+      _searchController.clear();
+      _showSearchBar = false; // Hide the search bar after selecting a location
+       _locationController.text = place.formattedAddress ?? ''; // Show the selected address in the TextField
+        _address = place.formattedAddress ?? ''; // Update the _address with the selected address
+
+        // Fetch establishment name for the searched location
+        _fetchPlaceDetails(location);
+    });
+
+     // Update the address and establishment name
+      setState(() {
+        _mapClicked = true; // Show address and establishment name
+        _address = place.formattedAddress ?? ''; // Update _address with the new location's address
+        _searchController.clear(); // Clear the search bar
+        _showSearchBar = false; // Hide the search bar
+      });
+
+  } else {
+    // Handle no results found
+    setState(() {
+      _searchController.clear();
+      _showSearchBar = false;
+    });
+  }
+}
+
+
+
 
 
   @override
@@ -385,6 +522,74 @@ void _searchPlaces(String query) async {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
              
+             Row(
+              children: [
+                Container(
+                  margin: const EdgeInsets.all(5),
+                  alignment: Alignment.center,
+                  height: 48.89,
+                  width: 48.89,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: SvgPicture.asset('assets/icons/from.svg'),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 30.0),
+                    height: 37,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xff1D1617).withOpacity(0.11),
+                          blurRadius: 4,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _locationController,
+                      onTap: () {
+                        setState(() {
+                          _showSearchBar = true; 
+                          submitClicked = false;
+                        });
+                      },
+                      onSubmitted: (query) {
+                        _searchPlaces(query);
+                        submitClicked = true;
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                        hintText: 'Search for places...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide.none,
+                        ),
+                        suffixIcon: _showSearchBar
+                            ? IconButton(
+                                icon: const Icon(Icons.cancel),
+                                onPressed: () {
+                                  setState(() {
+                                    _showSearchBar = false;
+                                    _searchController.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      
+                    ),
+                  ),
+                ),
+              ],
+            ),          
+             if(_mapClicked || submitClicked )
              Row(
               children: [
                 Container(
@@ -521,74 +726,6 @@ void _searchPlaces(String query) async {
               ],
             ),          
              if(_mapClicked || submitClicked )
-             Row(
-              children: [
-                Container(
-                  margin: EdgeInsets.all(5),
-                  alignment: Alignment.center,
-                  child: SvgPicture.asset('assets/icons/from.svg'),
-                  height: 48.89,
-                  width: 48.89,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: 30.0),
-                    height: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0xff1D1617).withOpacity(0.11),
-                          blurRadius: 4,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _locationController,
-                      onTap: () {
-                        setState(() {
-                          _showSearchBar = true; 
-                          submitClicked = false;
-                        });
-                      },
-                      onSubmitted: (query) {
-                        _searchPlaces(query);
-                        submitClicked = true;
-                      },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                        hintText: 'Search for places...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide.none,
-                        ),
-                        suffixIcon: _showSearchBar
-                            ? IconButton(
-                                icon: Icon(Icons.cancel),
-                                onPressed: () {
-                                  setState(() {
-                                    _showSearchBar = false;
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                      
-                    ),
-                  ),
-                ),
-              ],
-            ),          
-             if(_mapClicked || submitClicked )
              Column(
               children: [
                   Container(
@@ -629,7 +766,7 @@ void _searchPlaces(String query) async {
 
               const SizedBox(height: 10),
               Container(
-                padding: EdgeInsets.only(left: 10.0),
+                padding: const EdgeInsets.only(left: 20.0),
                 alignment: Alignment.centerLeft,
                 child: const Text(
                   'Pin a starting point',
@@ -651,7 +788,7 @@ void _searchPlaces(String query) async {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.only(left: 10.0),
+                      padding: const EdgeInsets.only(left: 20.0),
                       alignment: Alignment.centerLeft,
                       child: const Text(
                         'What is this location called?',
@@ -710,8 +847,7 @@ void _searchPlaces(String query) async {
                     
                     SizedBox(height: 20),
                     Container(
-                      padding: EdgeInsets.only(left: 10.0),
-                     
+                      padding: const EdgeInsets.only(left: 20.0),
                       alignment: Alignment.centerLeft,
                       child: const Text(
                         'What is the next step?',
@@ -726,31 +862,28 @@ void _searchPlaces(String query) async {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          margin: EdgeInsets.only(left: 10, right: 5, top: 10, bottom: 10),
+                          margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
-                              if(_locationNameController.text.isNotEmpty){
-                                setState(() {
-                               addWalkWidget();
+                              setState(() {
+                                // walkWidgets.add(buildWalk());
+                                rideClicked = false; 
+                                walkClicked = true;
+                               
                               });
-                              }
-                              else{
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                content: Text('Please fill out all fields.'),
-                                duration: Duration(seconds: 1),
-                                  ),
-                                );
-                               }                                   
-                            },                              
+                             
+                            },
+                            child: Text('Walk'),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(131, 26),
-                            ), child: null,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(131, 26),
+                            ),
+                            child: const Text('Walk'),
                           ),
                         ),
                         Container(
+                          margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
                           margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
                           child: ElevatedButton(
                             onPressed: () {
@@ -772,9 +905,10 @@ void _searchPlaces(String query) async {
                             },
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(131, 26),
-                            ), child: null,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(131, 26),
+                            ),
+                            child: const Text('Ride'),
                           ),
                         ),
                       ],
@@ -859,8 +993,8 @@ Widget buildMap() {
               children: [
                   
                 Container(
-                  padding: EdgeInsets.only(left: 10.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Choose Transportation Mode',
                     style: TextStyle(
                       color: Colors.black,
@@ -892,8 +1026,8 @@ Widget buildMap() {
                 ),
                 const SizedBox(height: 10),
                 Container(
-                  padding: EdgeInsets.only(left: 10.0),
-                  child: Text(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: const Text(
                     'Estimated Fare:',
                     style: TextStyle(
                       color: Colors.black,
@@ -960,7 +1094,7 @@ Widget buildMap() {
                 Row (
                 children: [
                   Container(
-                    margin: EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
+                    margin: const EdgeInsets.all(10),
                     height: 33,
                     width: 149,
                     decoration: BoxDecoration(
@@ -1067,7 +1201,7 @@ Widget buildMap() {
 
                 const SizedBox(height: 10),
                 Container(
-            margin: EdgeInsets.only(right: 20.0, left: 10.0),
+            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
             height: 37,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -1257,9 +1391,10 @@ Widget buildMap() {
 
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              backgroundColor: Color(0xff1F41BB),
-                              minimumSize: Size(120, 26),
-                            ), child: null,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(120, 26),
+                            ),
+                            child: const Text('Done'),
                           ),
                         ),
                       ],
