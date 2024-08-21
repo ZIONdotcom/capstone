@@ -1,5 +1,10 @@
+import 'package:capstone/pages/routeFinder2.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'package:uuid/uuid.dart';
 
 class RouteFinder extends StatefulWidget {
   const RouteFinder({super.key});
@@ -9,38 +14,60 @@ class RouteFinder extends StatefulWidget {
 }
 
 class _RouteFinderState extends State<RouteFinder> {
+  //navigate to 2nd screen and pass
+   void fetchRouteAndNavigate() {
+  if (lat_origin.isNotEmpty && long_origin.isNotEmpty && lat_destination.isNotEmpty && long_destination.isNotEmpty) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RouteFinder2(
+          latOrigin: lat_origin,
+          longOrigin: long_origin,
+          latDestination: lat_destination,
+          longDestination: long_destination,
+          destinationName: fromController.text,
+          originName: toController.text,
+        ),
+      ),
+    );
+  }
+  }
+  //end
+  var uuid = const Uuid();
+
+
   TextEditingController fromController = TextEditingController();
   TextEditingController toController = TextEditingController();
   bool isSwapped = false;
-  late String lat, long;
+
   FocusNode fromFocusNode = FocusNode();
   FocusNode toFocusNode = FocusNode();
+  List<String> locationSuggestions = [];
+  final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI';
+  late String lat, long;
+  late String lat_origin,long_origin,lat_destination,long_destination; 
 
   void swapFields() {
     setState(() {
-      // Swap the text
       String tempText = fromController.text;
       fromController.text = toController.text;
       toController.text = tempText;
-
-      // Toggle the swap state
       isSwapped = !isSwapped;
     });
   }
-  void initState(){
+
+  @override
+  void initState() {
     super.initState();
 
-    fromFocusNode.addListener((){
-      setState(() {
-        
-      });
+    fromFocusNode.addListener(() {
+      setState(() {});
     });
-    toFocusNode.addListener((){
-      setState(() {
-        
-      });
+    toFocusNode.addListener(() {
+      setState(() {});
     });
   }
+
   @override
   void dispose() {
     fromController.dispose();
@@ -50,8 +77,6 @@ class _RouteFinderState extends State<RouteFinder> {
     super.dispose();
   }
 
-
-  // For checking permission to access user's current location
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -69,6 +94,76 @@ class _RouteFinderState extends State<RouteFinder> {
     }
     return await Geolocator.getCurrentPosition();
   }
+
+  Future<void> fetchSuggestions(String text) async {
+    if (text.isEmpty) {
+      setState(() {
+        locationSuggestions = [];
+      });
+      return;
+    }
+    final String url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=$apiKey&components=country:ph';
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> predictions = json.decode(response.body)['predictions'];
+      setState(() {
+        locationSuggestions = predictions.map((p) => p['description'] as String).toList();
+      });
+    } else {
+      setState(() {
+        locationSuggestions = ['Failed to fetch suggestions'];
+      });
+    }
+  }
+
+  Future<void> fetchLatLong(String placeDescription) async {
+  // URL-encode the placeDescription to handle special characters
+  final encodedDescription = Uri.encodeComponent(placeDescription);
+  final String url = 'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedDescription&key=$apiKey';
+
+  try {
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      //print("Request URL: $url"); 
+      //print("API Response: $jsonResponse");
+
+      final List<dynamic> results = jsonResponse['results'];
+      if (results.isNotEmpty) {
+        final location = results[0]['geometry']['location'];
+        setState(() {
+          lat = location['lat'].toString();
+          long = location['lng'].toString();
+
+          if(toFocusNode.hasFocus){
+            lat_destination = lat;
+            long_destination = long;
+          }
+          else if(fromFocusNode.hasFocus){
+            lat_origin = lat;
+            long_origin = long;
+          }
+          //navigate to 2nd screen christine 
+           if (lat_origin.isNotEmpty && long_origin.isNotEmpty && lat_destination.isNotEmpty && long_destination.isNotEmpty) {
+              fetchRouteAndNavigate();
+            }
+        });
+        print("Lat: $lat, Long: $long");
+      } else {
+        print("No results found for the given place description.");
+      }
+    } else {
+      print("Failed to fetch latitude and longitude. Status code: ${response.statusCode}");
+      print("Response body: ${response.body}");
+    }
+  } catch (e) {
+    print("Error fetching latitude and longitude: $e");
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,8 +174,6 @@ class _RouteFinderState extends State<RouteFinder> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-
-            // From and To.. with icons
             Container(
               padding: const EdgeInsets.only(bottom: 13, left: 5, right: 5),
               decoration: BoxDecoration(
@@ -118,29 +211,27 @@ class _RouteFinderState extends State<RouteFinder> {
                     child: Column(
                       children: [
                         if (isSwapped)
-                          buildTextField('To...', toController, toFocusNode)
+                          buildTextField('To...',fromController, toFocusNode)
                         else
                           buildTextField('From..', fromController, fromFocusNode),
                         const SizedBox(height: 8),
                         if (isSwapped)
-                          buildTextField('From..', fromController, fromFocusNode)
+                          buildTextField('From..', toController, fromFocusNode)
                         else
                           buildTextField('To...', toController, toFocusNode),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  
                   IconButton(
                     icon: const Icon(Icons.swap_vert, size: 30),
                     onPressed: swapFields,
                   ),
                 ],
               ),
+            
             ),
-
-            const SizedBox(height: 16),
-
-            // user's location
+            const SizedBox(height: 8),
             InkWell(
               onTap: () {
                 _getCurrentLocation().then((value) {
@@ -150,15 +241,19 @@ class _RouteFinderState extends State<RouteFinder> {
                   setState(() {
                     if (fromFocusNode.hasFocus) {
                       fromController.text = locationText;
+                      lat_origin = lat;
+                      long_origin = long;
                     } else if (toFocusNode.hasFocus) {
                       toController.text = locationText;
+                      lat_destination = lat;
+                      long_destination = long;
                     }
                   });
-                  print("Lat: "+lat+" Long: " + long);
+                  print("Lat: $lat, Long: $long");
                 });
               },
               child: Container(
-                padding: const EdgeInsets.only(top: 10, bottom: 13, left: 10, right: 5),
+                padding: const EdgeInsets.only(top: 14, bottom: 14, left: 10, right: 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
@@ -166,7 +261,7 @@ class _RouteFinderState extends State<RouteFinder> {
                       color: Colors.grey.withOpacity(0.5),
                       spreadRadius: 1,
                       blurRadius: 2,
-                      offset: const Offset(0, 3.5),
+                      
                     ),
                   ],
                 ),
@@ -184,57 +279,117 @@ class _RouteFinderState extends State<RouteFinder> {
                 ),
               ),
             ),
+            InkWell(
+              onTap: () {
+                //dito yung map
+              },
+              child: Container(
+                padding: const EdgeInsets.only(top: 14, bottom: 14, left: 10, right: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 1,
+                      blurRadius: 2,
+                      
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.pin_drop, size: 24, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text(
+                      'Pin locaction on the map',
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            ),
+            
             const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: locationSuggestions.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(locationSuggestions[index]),
+                    onTap: () {
+                      String selectedLocation = locationSuggestions[index];
+                      if (fromFocusNode.hasFocus) {
+                        fromController.text = selectedLocation;
+                      } else if (toFocusNode.hasFocus) {
+                        toController.text = selectedLocation;
+                      }
+                      setState(() {
+                        locationSuggestions.clear();
+                      });
+                      fetchLatLong(selectedLocation);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget buildTextField(String hintText, TextEditingController controller, FocusNode focusNode) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(0, 3.5),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-          hintText: hintText,
-          border: OutlineInputBorder(
+  Widget buildTextField(String hintText,TextEditingController controller, FocusNode focusNode) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(5),
-            borderSide: BorderSide.none,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.5),
+                spreadRadius: 1,
+                blurRadius: 2,
+                offset: const Offset(0, 3.5),
+              ),
+            ],
           ),
-          suffixIcon:focusNode.hasFocus && controller.text.isNotEmpty ?
-            IconButton( 
-              icon: const Icon(Icons.clear),
-              onPressed:(){
-                setState(() {
-                  controller.clear();
-                });
-              })
-              :null,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              hintText: hintText,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(5),
+                borderSide: BorderSide.none,
+              ),
+              suffixIcon: focusNode.hasFocus && controller.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          controller.clear();
+                          locationSuggestions.clear();
+                        });
+                      })
+                  : null,
+            ),
+            onChanged: (text) {
+              fetchSuggestions(text);
+            },
+          ),
         ),
-        onChanged: (text){
-              setState(() {
-                if(controller.text.isEmpty){
-
-                }
-              });
-            }
-      ),
+      
+      ],
+      
     );
+    
   }
+ 
 }

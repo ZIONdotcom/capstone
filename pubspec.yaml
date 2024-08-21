@@ -43,13 +43,12 @@ dependencies:
   google_place: ^0.4.7
   googleapis: ^13.1.0
   googleapis_auth: ^1.4.1
-
-
-
-
+  provider: ^6.0.3
   google_maps_webservice: any
   flutter_riverpod: ^2.5.1
   eosdart: ^0.4.10
+  uuid: ^4.4.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

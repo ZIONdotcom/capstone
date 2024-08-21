@@ -8,16 +8,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:google_maps_webservice/places.dart' as places;
-import 'package:provider/provider.dart';
 
 
 
-class Routecreation extends StatefulWidget {
-  const Routecreation({super.key});
-
+class DraftRoutecreation extends StatefulWidget {
+  const DraftRoutecreation({super.key});
 
   @override
-  State<Routecreation> createState() => _MyWidgetState();
+  State<DraftRoutecreation> createState() => _MyWidgetState();
 }
 
 
@@ -41,45 +39,7 @@ class RideStep{
 }*/
 
 
-
-
-
-class MapState with ChangeNotifier {
-   
-  Marker? _marker;
-  String? _address;  // Store the current address
-
-  Set<Marker> get currentMarkers => _marker != null ? {_marker!} : {};
-
-  void updateMarker(LatLng position) async {
-    _marker = Marker(
-      markerId: MarkerId('unique'),
-      position: position,
-    );
-    notifyListeners();
-    await getAddress(position);
-  }
-
-  Future<void> getAddress(LatLng position) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-        _address = '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
-        notifyListeners();
-      }
-    } catch (e) {
-      print('Failed to get address: $e');
-    }
-  }
-
-  String get currentAddress => _address ?? 'No address available';
-}
-
-
-
-class _MyWidgetState extends State<Routecreation> {
-  
+class _MyWidgetState extends State<DraftRoutecreation> {
  CameraPosition _initialCameraPosition = const CameraPosition(
   target: LatLng(14.831582, 120.903786), // Default initial position
   zoom: 11.5, // Default zoom level
@@ -195,7 +155,6 @@ bool _isFirstSearch = true; // Track if it's the first search
   String _address = '';
   String _endAddress = '';
   String _establishmentName = '';
-  String check = '';
   bool submitClicked = false;
  /* final TextEditingController _locationNameController = TextEditingController();
   final TextEditingController _walkToController = TextEditingController();
@@ -282,36 +241,35 @@ bool _isFirstSearch = true; // Track if it's the first search
     }
   }
 
-// Future<void> _onMap2Tap(LatLng position) async {
-//   List<Placemark> placemarks2 = await placemarkFromCoordinates(position.latitude, position.longitude);
+Future<void> _onMap2Tap(LatLng position) async {
+  List<Placemark> placemarks2 = await placemarkFromCoordinates(position.latitude, position.longitude);
 
-//   if (placemarks2.isNotEmpty) {
-//     Placemark placemark2 = placemarks2[0];
-//     String name2 = placemark2.name ?? "";
-//     String address2 = "${placemark2.street ?? ""}, ${placemark2.locality ?? ""}, ${placemark2.administrativeArea ?? ""}, ${placemark2.country ?? ""}";
+  if (placemarks2.isNotEmpty) {
+    Placemark placemark2 = placemarks2[0];
+    String name2 = placemark2.name ?? "";
+    String address2 = "${placemark2.street ?? ""}, ${placemark2.locality ?? ""}, ${placemark2.administrativeArea ?? ""}, ${placemark2.country ?? ""}";
 
-//     setState(() {  
-//         // _selectedMarker2 = Marker(
-//         //   markerId: const MarkerId('selected-location-2'),
-//         //   position: position,
-//         //   infoWindow: InfoWindow(title: name2),
-//         //   visible: true
-//         // );
+    setState(() {  
+        // _selectedMarker2 = Marker(
+        //   markerId: const MarkerId('selected-location-2'),
+        //   position: position,
+        //   infoWindow: InfoWindow(title: name2),
+        //   visible: true
+        // );
 
-//         _markers2.clear();
-//         _markers2.add(Marker(markerId: MarkerId('map2'), position: position));
+        _markers2.clear();
+        _markers2.add(Marker(markerId: MarkerId('map2'), position: position));
       
-//       _map2Clicked = true;
-//       _endLocNameController.text = name2;
-//       _endAddress = _endLocNameController.text;
-      
+      _map2Clicked = true;
+      _endLocNameController.text = name2;
+      _endAddress = address2;
 
-//     });
+    });
 
-//     // Fetch establishment name
-//     _fetchPlaceDetails2(position);
-//   }
-// }
+    // Fetch establishment name
+    _fetchPlaceDetails2(position);
+  }
+}
 
 
  Future<void> _fetchPlaceDetails(LatLng position) async {
@@ -742,41 +700,6 @@ void _searchPlaces(String query) async {
   );
 }
 
-Widget buildMap2() {
-  return ChangeNotifierProvider(
-    create: (context) => MapState(),
-    child: Consumer<MapState>(
-      builder: (context, mapState, child) {
-        return Column(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: 200,
-              child: GoogleMap(
-                initialCameraPosition: _initialCameraPosition,
-                markers: mapState.currentMarkers,
-                onTap: (LatLng position) {
-                  setState(() {
-                      _map2Clicked = true;
-                    });
-                  mapState.updateMarker(position);  // Update the marker's position
-                 
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(mapState.currentAddress),  // Display the address
-            ),
-          ],
-        );
-      },
-    ),
-  );
-}
-
-
-
 
     Widget buildDone(){
       return Column(
@@ -784,7 +707,6 @@ Widget buildMap2() {
            Container(
               padding: const EdgeInsets.only(left: 20.0),
               child: const Text(
-                //here
                 'Pin the end location:',
                 style: TextStyle(
                   color: Colors.black,
@@ -796,13 +718,12 @@ Widget buildMap2() {
          
           //second map here
            buildMap2(),
-           
           
-            // if (_map2Clicked)
+              if (_mapClicked)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-         Container(
+           Container(
             padding: const EdgeInsets.only(left: 20.0),
             child: const Text(
               'What is the location called?',
@@ -828,7 +749,7 @@ Widget buildMap2() {
               ],
             ),
             child: TextFormField(
-               controller: _endLocNameController,
+              controller: _endLocNameController,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
@@ -844,7 +765,6 @@ Widget buildMap2() {
                               return "Fill out this field";
                             }
                             else{
-                              //_map2Clicked = false;
                               return null;
                             }
                           }
@@ -906,9 +826,24 @@ Widget buildMap2() {
 
     }
       //method to use in storing data
-
+ 
 
 //displaymap2
+Widget buildMap2() {
+  return SizedBox(
+    width: double.infinity,
+    height: 200,
+    child: GoogleMap(
+      initialCameraPosition: _initialCameraPosition2,
+      onMapCreated: (controller) {
+        _controller2 = controller;
+      },
+      onTap: _onMap2Tap,
+      markers: _markers2,
+      //markers: _selectedMarker2 != null ? {_selectedMarker2!} : {},
+    ),
+  );
+}
 
  
     Widget buildRide(TextEditingController rideController,
