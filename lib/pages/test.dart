@@ -1,183 +1,167 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_svg/flutter_svg.dart';
 
+class test extends StatefulWidget {
+  const test({super.key});
 
-class TransitMapScreen extends StatefulWidget {
   @override
-  _TransitMapScreenState createState() => _TransitMapScreenState();
+  State<test> createState() => _TravelPlan3State();
 }
 
-class _TransitMapScreenState extends State<TransitMapScreen> {
-  GoogleMapController? _mapController;
-  final String _apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI';
-  Set<Polyline> _polylines = {};
-  final TextEditingController _originController = TextEditingController();
-  final TextEditingController _destinationController = TextEditingController();
-  List<dynamic> _routes = [];
-  List<dynamic> _selectedRouteSteps = [];
-  String _selectedRouteInfo = '';
+class _TravelPlan3State extends State<test> {
+  GoogleMapController? _controller;
 
-  Future<Map<String, dynamic>> getPublicTransitDirections(String origin, String destination, String apiKey) async {
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&mode=transit&key=$apiKey'
-    );
-
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load directions');
-    }
-  }
-
-  void _getDirections() async {
-    if (_originController.text.isEmpty || _destinationController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter both origin and destination')));
-      return;
-    }
-
-    try {
-      final directions = await getPublicTransitDirections(
-        _originController.text,
-        _destinationController.text,
-        _apiKey,
-      );
-
-      setState(() {
-        _routes = directions['routes'];
-        _selectedRouteSteps.clear();
-        _selectedRouteInfo = '';
-        _polylines.clear();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error fetching directions')));
-    }
-  }
-
-  void _selectRoute(int index) {
-    final selectedRoute = _routes[index];
-    final legs = selectedRoute['legs'][0];
-    final steps = legs['steps'];
-
-    StringBuffer directionsBuffer = StringBuffer();
-
-    for (var step in steps) {
-      String travelMode = step['travel_mode'];
-      String instructions = step['html_instructions'];
-      directionsBuffer.write('$travelMode: $instructions\n\n');
-    }
-
-    setState(() {
-      _selectedRouteSteps = steps;
-      _selectedRouteInfo = directionsBuffer.toString();
-      _polylines.clear();
-      displayRouteOnMap(steps);
-    });
-  }
-
-  void displayRouteOnMap(List<dynamic> steps) {
-    List<LatLng> polylineCoordinates = [];
-
-    for (var step in steps) {
-      final startLocation = step['start_location'];
-      final endLocation = step['end_location'];
-
-      polylineCoordinates.add(LatLng(startLocation['lat'], startLocation['lng']));
-      polylineCoordinates.add(LatLng(endLocation['lat'], endLocation['lng']));
-    }
-
-    setState(() {
-      _polylines.add(Polyline(
-        polylineId: PolylineId('transit_route'),
-        points: polylineCoordinates,
-        color: Colors.blue,
-        width: 5,
-      ));
-    });
-  }
+  CameraPosition _initialCameraPosition = const CameraPosition(
+    target: LatLng(14.831582, 120.903786),
+    zoom: 11.5,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Public Transit Directions'),
-      ),
-      body: Column(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _originController,
-              decoration: InputDecoration(
-                labelText: 'Origin',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _destinationController,
-              decoration: InputDecoration(
-                labelText: 'Destination',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          if (_routes.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: _routes.length,
-                itemBuilder: (context, index) {
-                  final route = _routes[index];
-                  final legs = route['legs'][0];
-                  final duration = legs['duration']['text'];
-                  final distance = legs['distance']['text'];
-                  return ListTile(
-                    title: Text('Route ${index + 1}'),
-                    subtitle: Text('Duration: $duration, Distance: $distance'),
-                    onTap: () => _selectRoute(index),
-                  );
-                },
-              ),
-            ),
-          if (_selectedRouteSteps.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: _selectedRouteSteps.length,
-                itemBuilder: (context, index) {
-                  final step = _selectedRouteSteps[index];
-                  String travelMode = step['travel_mode'];
-                  String instructions = step['html_instructions'];
-                  return ListTile(
-                    title: Text('$travelMode'),
-                    subtitle: Text(instructions),
-                  );
-                },
-              ),
-            ),
-          Expanded(
+          // Google Map
+          Positioned.fill(
             child: GoogleMap(
-              onMapCreated: (controller) {
-                setState(() {
-                  _mapController = controller;
-                });
+              initialCameraPosition: _initialCameraPosition,
+              onMapCreated: (GoogleMapController controller) {
+                _controller = controller;
               },
-              initialCameraPosition: CameraPosition(
-                target: LatLng(14.5995, 120.9842), // Example: Manila, Philippines
-                zoom: 12,
+            ),
+          ),
+          // Overlapping Container
+          Positioned(
+            top: 230, // Adjust this value for more or less overlap
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 1,
+                    blurRadius: 2,
+                    offset: const Offset(0, -3.5), // Shadow offset upwards
+                  ),
+                ],
               ),
-              polylines: _polylines,
+              child: Column(
+                children: [
+                  Container(
+                    alignment: Alignment.topLeft,
+                    padding:
+                        const EdgeInsets.only(left: 30, top: 30, bottom: 30),
+                    child: const Text(
+                      'Routes',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  suggestRoute('jeep', '21', '4mins',
+                      SvgPicture.asset('assets/icons/bus2.svg')),
+                ],
+              ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getDirections,
-        child: Icon(Icons.search),
+    );
+  }
+
+  Widget suggestRoute(
+      String transpoNames, String fare, String time, SvgPicture pic) {
+    return Container(
+      width: double.infinity, // Make the width match the parent
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2), // Shadow color with opacity
+            offset: const Offset(0, 4), // Offset for the shadow
+            blurRadius: 8, // Blur radius for the shadow
+            spreadRadius: 2, // Spread radius for the shadow
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2, // 20% of the width
+              child: Container(
+                padding: const EdgeInsets.only(right: 10),
+                child: pic,
+              ),
+            ),
+            Expanded(
+              flex: 9, // 80% of the width
+              child: Column(
+                children: [
+                  //transpoName, fare, time
+                  Row(
+                    children: [
+                      Text(
+                        transpoNames,
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  //route
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.only(
+                            right: 8.0), // Space between the two texts
+                        child: const Text(
+                          "Fare:",
+                          style: TextStyle(color: Colors.black),
+                          textAlign: TextAlign.start, // Align text to the start
+                        ),
+                      ),
+                      Text(
+                        fare,
+                        style: const TextStyle(color: Colors.black),
+                        textAlign: TextAlign.start, // Align text to the start
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.only(
+                            right: 8.0), // Space between the two texts
+                        child: const Text(
+                          "Time:",
+                          style: TextStyle(color: Colors.black),
+                          textAlign: TextAlign.start, // Align text to the start
+                        ),
+                      ),
+                      Text(
+                        time,
+                        style: const TextStyle(color: Colors.black),
+                        textAlign: TextAlign.start, // Align text to the start
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
