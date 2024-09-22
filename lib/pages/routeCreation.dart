@@ -1,992 +1,565 @@
-import 'dart:collection';
-import 'dart:ffi';
-
+import 'dart:core';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_webservice/places.dart';
-import 'package:google_maps_webservice/places.dart' as places;
+import 'package:geocoding/geocoding.dart'; //use to convert coordinates to address
 
-
-class Routecreation extends StatefulWidget {
-  const Routecreation({super.key});
+class RouteCreation extends StatefulWidget {
+  const RouteCreation({super.key});
 
   @override
-  State<Routecreation> createState() => _MyWidgetState();
+  State<RouteCreation> createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<Routecreation> {
-  static const _initialCameraPosition = CameraPosition(
-    target: LatLng(14.831582, 120.903786), // Set the initial position of the map
-    zoom: 11.5, // Set the zoom level
-  );
+class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderStateMixin {
+  GoogleMapController? mapController;
+  Marker? originMarker;
+  Marker? temporaryMarker;
+  Polyline? temporaryPolyline;
+  //AnimationController? _animationController;
+  final PageController pageController = PageController();
+  TextEditingController textOriginController = TextEditingController();
+  final LatLng _initialCameraPosition = LatLng(14.831582, 120.903786);
+  late LatLng currentPinnedLocation;
+  bool textOriginIsNotEmpty = false;
+  bool mapClicked = false;
+  bool showWalkWidget = false;
+  int backButtonPressedCount = 0;
 
-  bool walkClicked = false;
-  bool doneClicked = false;
-  bool rideClicked = false;
-  bool _mapClicked = false;
-  String? selectedMode;
+  List<LatLng> pinnedLocations = [];
+  Set<Polyline> _polylines = {};
+  Set<Marker> _markers = {};
+  Set<Marker> _originMarker = {};
+  int stepNumber = 1;
+  //double sheetSize = 0.0;
+  List<double>sheetSizes = [0.25,0.1,0.25]; //one question sheet size
+  // double currentSheetSize = 0.0;
+  // final GlobalKey SheetSizeKey = GlobalKey();
 
-  List<String> modes = ['Jeep', 'Tricycle', 'Bus', 'Walk'];
-  List<Widget> walkWidgets = [];
-  List<Widget> rideWidgets = [];
-  List<Widget> doneWidgets =[];
-
-  final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI'; // Replace with your actual API key
-  late final GoogleMapsPlaces _places;
 
   @override
   void initState() {
     super.initState();
-    _places = GoogleMapsPlaces(apiKey: apiKey); // Initialize _places with the API key
-  }
+    //animation for bottom sheet
+    // _animationController = AnimationController(
+    //   vsync: this,
+    //   duration: Duration(milliseconds: 300),
+    //   );
+    //   _animationController?.forward();
 
-
-  Map<String,HashSet>steps = HashMap();
-  
-
-   GoogleMapController? _controller;
-  Marker? _selectedMarker;
-  final String _locationName = "";
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController(); // Controller for the search bar
-  bool _showSearchBar = false; // New state for showing/hiding the search bar
-  String _address = '';
-  String _establishmentName = '';
-  bool submitClicked = false;
-  final TextEditingController _locationNameController = TextEditingController();
-  final TextEditingController _walkToController = TextEditingController();
-  final TextEditingController _estiFareController = TextEditingController();
-  final TextEditingController _stoplocationController = TextEditingController();
-  final TextEditingController _endLocController = TextEditingController();
-  final TextEditingController _endLocNameController = TextEditingController();
-   final TextEditingController _toRouteController = TextEditingController();
-    final TextEditingController _fromRouteController = TextEditingController();
-
-  @override
-  void dispose() {
-    _locationController.dispose();
-    _addressController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-  
-  String _address = '';
-  String _establishmentName = '';
-  final int _stepNumber= 0;
-
-
-  //Hashsets that will gather data
-  final locationDetails = HashSet();
-  final walkDetails = HashSet<String>();
-  final rideDetails = HashSet<String>();
-
-  //method to use in storing data
-  void insertLocationDetails(String address, String latLang, String name){
-    locationDetails.addAll({address,latLang,name});
-    String step = 'Step' '$_stepNumber';
-    insertDataintoMap(step, locationDetails);
-  } 
-  void insertWalkDetails(String walkTo){
-    walkDetails.addAll({'Walk',walkTo});
-    String step = 'Step' '$_stepNumber'; 
-    insertDataintoMap(step, walkDetails);
-  }
-   insertRideDetails(String transpoMode,String fare, String fromRoute, String toRoute,String stopLoc){
-    rideDetails.addAll({'Ride',transpoMode,fare,fromRoute,toRoute,stopLoc});
-    String step = 'Step' '$_stepNumber'; 
-    insertDataintoMap(step, rideDetails);
-  }
-  void insertDataintoMap(String step,HashSet details){
-    steps.addAll({step: details});
-
-  }
-
-
-  Future<void> _onMapTap(LatLng position) async {
-  List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-
-    if (placemarks.isNotEmpty) {
-      Placemark placemark = placemarks[0];
-      String name = placemark.name ?? "";
-      String address = "${placemark.street ?? ""}, ${placemark.locality ?? ""}, ${placemark.administrativeArea ?? ""}, ${placemark.country ?? ""}";
-
+    //to identify if the textOrigin is empty or not
+    textOriginController.addListener((){
       setState(() {
-        _selectedMarker = Marker(
-          markerId: const MarkerId('selected-location'),
-          position: position,
-          infoWindow: InfoWindow(title: name),
-        );
-        _mapClicked = true;
-        _locationController.text = name;
-        _addressController.text = address;
-        _address = address;
-
-        // Fetch establishment name
-        _fetchPlaceDetails(position);
+        textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
+      //print(textOriginIsNotEmpty.toString());
       });
+    });
+  }
+  // void getCurrentSheetSize(){
+  //   final RenderBox renderBox = SheetSizeKey.currentContext?.findRenderObject() as RenderBox;
+  //   final size = renderBox?.size;
+  //   setState(() {
+  //     currentSheetSize = size?.height ?? 0.0;
+  //   });
+  // }
+
+//GET ADDRESS OF PINNED LOCATION
+  Future<String> _getAddress(LatLng position) async {
+    try{
+      List<Placemark> placemarks  = await placemarkFromCoordinates(position.latitude, position.longitude);
+      if(placemarks.isNotEmpty){
+        Placemark placemark = placemarks.first;
+        return '${placemark.name},${placemark.locality}, ${placemark.administrativeArea}';
+      }
+      return 'No address found';
+    } catch (e){
+      return 'Error retrieving address';
     }
   }
 
-
- Future<void> _fetchPlaceDetails(LatLng position) async {
-  // Create an instance of the Location class from google_maps_webservice
-  final location = places.Location(
-    lat: position.latitude,
-    lng: position.longitude,
-  );
-
-  // Fetch nearby places using the nearbySearch method
-  final response = await _places.searchNearbyWithRadius(
-    location,
-    500, // Radius in meters
-    type: 'establishment',
-    keyword: 'church|coffee shop|mall|establishment',
-  );
-
-  // Check the response and update state
-  if (response.status == 'OK' && response.results.isNotEmpty) {
-    final establishment = response.results.first;
-    final name = establishment.name;
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
+  }
+  void _addOrigin(LatLng pinnedLocation) async {
+    currentPinnedLocation = pinnedLocation;
+    String address = await _getAddress(pinnedLocation);
     setState(() {
-      _establishmentName = name;
+      if(_originMarker.isNotEmpty){
+        _originMarker.clear();
+      }
+      _originMarker.add(Marker(
+        markerId: MarkerId('origin'),
+        position: pinnedLocation,
+        infoWindow: InfoWindow(
+          title: "Origin",
+          snippet: address,
+        ),
+      ));
     });
-  } else {
+    
+  }
+  void _addMarkerIcon(LatLng pinnedLocation) {
     setState(() {
-      _establishmentName = 'No nearby establishment found';
+      if(_markers.length < stepNumber){
+        //add pin to list
+        pinnedLocations.add(pinnedLocation);
+
+        //add marker to markers set
+        _markers.add(Marker(
+        markerId: MarkerId(pinnedLocation.toString()),
+        position: pinnedLocation,
+        infoWindow: InfoWindow(
+          title: "Step $stepNumber",
+        ),
+      ));
+      }
+      else{
+        // Marker(
+        // markerId: MarkerId(pinnedLocation.toString()),
+        // position: pinnedLocation,
+        // infoWindow: InfoWindow(
+        //   title: "Step $stepNumber",
+        // );
+      
+      }
+//temporary polyline and marker
+
+    //add polyline
+      if (pinnedLocations.length > 1) {
+        _polylines.add(Polyline(
+          polylineId: PolylineId(pinnedLocation.toString()),
+          points: pinnedLocations,
+          color: Colors.blue,
+          width: 5,
+        ));
+      }
+      stepNumber++;
     });
   }
-}
 
-
-
-
-
-void _searchPlaces(String query) async {
-  final response = await _places.searchByText(query);
-
-  if (response.status == 'OK' && response.results.isNotEmpty) {
-    final place = response.results.first;
-    final location = LatLng(place.geometry?.location.lat ?? 0.0, place.geometry?.location.lng ?? 0.0);
-
-    setState(() {
-      _selectedMarker = Marker(
-        markerId: const MarkerId('search-location'),
-        position: location,
-        infoWindow: InfoWindow(title: place.name),
+  //animate camera to last pinned location
+  void _focusOnLastPinnedLocation() async {
+    if (pinnedLocations.isNotEmpty && mapController != null) {
+       mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(pinnedLocations.last, 14.0),
       );
-      _controller?.animateCamera(CameraUpdate.newLatLng(location));
-      _searchController.clear();
-      _showSearchBar = false; // Hide the search bar after selecting a location
-       _locationController.text = place.formattedAddress ?? ''; // Show the selected address in the TextField
-        _address = place.formattedAddress ?? ''; // Update the _address with the selected address
-
-        // Fetch establishment name for the searched location
-        _fetchPlaceDetails(location);
-    });
-
-     // Update the address and establishment name
-      setState(() {
-        _mapClicked = true; // Show address and establishment name
-        _address = place.formattedAddress ?? ''; // Update _address with the new location's address
-        _searchController.clear(); // Clear the search bar
-        _showSearchBar = false; // Hide the search bar
-      });
-
-  } else {
-    // Handle no results found
-    setState(() {
-      _searchController.clear();
-      _showSearchBar = false;
-    });
+    }
   }
-}
+  // double _getVisibleMapHeight(BuildContext context) {
+  //   final screenHeight = MediaQuery.of(context).size.height;
+  //   getCurrentSheetSize();
+  //   //final bottomSheetVisibleHeight =   currentSheetSize * screenHeight;
+  //   return screenHeight - bottomSheetVisibleHeight;
+  // }
 
 
+//MODIFYING BOTTOM SHEET SIZE
+  //sheetsize for one quesstion (ex. What is this location called kinemeerut)
+  void _fixedSheetSize(){
+      // reset to one question size
+      sheetSizes[0] = 0.25; //initialSize
+      sheetSizes[1] = 0.1;//minChildSize
+      sheetSizes[2] = 0.25; //maxChildSize
+  }
+  bool _sheetSizeForSecondQuestion(){
+    if(textOriginIsNotEmpty == true){
+      sheetSizes[0] = 0.3; //initialSize
+      sheetSizes[1] = 0.1;//minChildSize
+      sheetSizes[2] = 0.3; //maxChildSize
+      print(sheetSizes);
+    }
+    else{
+      _fixedSheetSize();
+      print('initial');
+      print(sheetSizes);
+    }
+    return textOriginIsNotEmpty;
+  }
+
+  void _goToNextPage() {
+    if(backButtonPressedCount == 1){backButtonPressedCount--;}
+    pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+  void _goToPreviousPage() {
+    pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: appBar(),
-      body: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 0, top: 10),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-             
-             Row(
-              children: [
-                Container(
-                  margin: const EdgeInsets.all(5),
-                  alignment: Alignment.center,
-                  height: 48.89,
-                  width: 48.89,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: SvgPicture.asset('assets/icons/from.svg'),
-                ),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 30.0),
-                    height: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
-                          blurRadius: 4,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _locationController,
-                      onTap: () {
-                        setState(() {
-                          _showSearchBar = true; 
-                          submitClicked = false;
-                        });
-                      },
-                      onSubmitted: (query) {
-                        _searchPlaces(query);
-                        submitClicked = true;
-                      },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                        hintText: 'Search for places...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide.none,
-                        ),
-                        suffixIcon: _showSearchBar
-                            ? IconButton(
-                                icon: const Icon(Icons.cancel),
-                                onPressed: () {
-                                  setState(() {
-                                    _showSearchBar = false;
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: (){
 
-
-             
-
-             if(_mapClicked || submitClicked )
-             Column(
-              children: [
-                  Container(
-                    padding: const EdgeInsets.only(left: 20.0),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _address,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.only(left: 20.0),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'establishment name',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 66, 66, 66),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-              ],
-             ),
-          
-              const SizedBox(height: 10),
-
-              const Divider(
-                thickness: 2.0,
-                color: Colors.grey,
-              ),
-
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.only(left: 20.0),
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  'Pin a starting point',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              buildMap(),
-              
-              const SizedBox(height: 20),
-
-              if (_mapClicked)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is this location called?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                      const SizedBox(height: 10),
-                    Container(
-                      margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-                      height: 37,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xff1D1617).withOpacity(0.11),
-                            blurRadius: 4,
-                            spreadRadius: 0.0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _locationNameController,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          hintText: 'Type here...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is the next step?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                // walkWidgets.add(buildWalk());
-                                rideClicked = false; 
-                                walkClicked = true;
-                               
-                              });
-                             
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
-                            ),
-                            child: const Text('Walk'),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                walkClicked = false;
-                                // rideWidgets.add(buildWalk());
-                                rideClicked = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
-                            ),
-                            child: const Text('Ride'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  
-                  ],
-                ),
-            
-              if (rideClicked) buildRide(),
-              if (walkClicked) buildWalk(),
-                ...walkWidgets, 
-              ...rideWidgets,
-              ...doneWidgets,
- 
-            ],
-          ),
+          },
         ),
-      ),
-      backgroundColor: Colors.white,
-    );
-  }
-
-  AppBar appBar() {
-    return AppBar(
-      title: const Padding(
-        padding: EdgeInsets.only(left: 16.0, top: 10),
-        child: Text(
-          'Create and suggest route',
+        title: const Text(
+          'Create a route',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
             fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
       ),
-      backgroundColor: Colors.white,
-      elevation: 0.0,
+
+      body: Column(
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: mapClicked ? 630 : double.infinity, // Map height
+                  width: double.infinity, // Full width of screen
+                  child: GoogleMap(
+                    onMapCreated: _onMapCreated,
+                    initialCameraPosition: CameraPosition(
+                      target: _initialCameraPosition,
+                      zoom: 12.0,
+                    ),
+                    markers: {..._originMarker,..._markers},
+                    polylines: _polylines,
+                    onTap: (LatLng pinnedLocation) {
+                      if(pinnedLocations.isEmpty){
+                        _addOrigin(pinnedLocation);
+                        print('tap');
+                              
+                      }
+                      else{
+                        _addMarkerIcon(pinnedLocation);
+                      }
+                      mapClicked = true;
+                    },
+                  ),
+                ),
+                if (mapClicked)
+                  DraggableScrollableSheet(
+                   // key: SheetSizeKey,
+                    initialChildSize: sheetSizes[0],
+                    minChildSize: sheetSizes[1],
+                    maxChildSize: sheetSizes[2],
+                    builder: (BuildContext context, ScrollController scrollController) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20.0),
+                            topRight: Radius.circular(20.0),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 10.0,
+                            ),
+                          ],
+                        ),
+                        child: PageView(
+                          controller: pageController, // Use the page controller
+                        physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            
+                            Column(
+                              //fist page
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 10),
+                                  child: Container(
+                                    width: 60,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  
+                                  child: SingleChildScrollView(
+                                    controller: scrollController,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            alignment: Alignment.center,
+                                            padding: const EdgeInsets.symmetric(vertical: 20.0),
+                                            child: const Text(
+                                              'What is this location called?',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Container(
+                                            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
+                                            height: 37,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(5),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(0xff1D1617).withOpacity(0.11),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: (){
+                                                //i dont know pa dito, gusto ko kase na pag clinick is magincrease yung size ng sheet, pagisipan ko pa pano maging smooth haha
+                                              },
+                                              child: TextFormField(
+                                                controller: textOriginController,
+                                                decoration: InputDecoration(
+                                                  filled: true,
+                                                  fillColor: Colors.white,
+                                                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                                                  hintText: 'Type here...',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(5),
+                                                    borderSide: BorderSide.none,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          // Align(
+                                          //   alignment: Alignment.bottomRight,
+                                          //   child: IconButton(
+                                          //     icon: const Icon(Icons.arrow_forward_rounded),
+                                          //     iconSize: 35.0,
+                                          //     onPressed: (){
+                                        
+                                          //     },
+                                          //   ),
+                                          // ),
+                                          if(_sheetSizeForSecondQuestion())
+                                          Column(
+                                            children: [
+                                              Container(
+                                              padding: const EdgeInsets.only(left: 20.0),
+                                              alignment: Alignment.centerLeft,
+                                              child: const Text(
+                                                'What is the first step?',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                  margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
+                                                  child: ElevatedButton(
+                                                    onPressed: (){
+                                                        pinnedLocations.add(currentPinnedLocation);
+                                                        print('added ${currentPinnedLocation}');
+                                                        pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeIn);
+                                                        //showWalkWidget = true;
+                                                    },
+                                                    style: ElevatedButton.styleFrom(
+                                                      foregroundColor: Colors.white,
+                                                      backgroundColor: const Color(0xff1F41BB),
+                                                      minimumSize: const Size(131, 26), 
+                                                    ),
+                                                     child: const Text('Walk'),
+                                                  ),
+                                                  ),
+                                                  Container(
+                                                  margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
+                                                  child: ElevatedButton(
+                                                    onPressed: (){
+                                                        pinnedLocations.add(currentPinnedLocation);
+                                                        print('added ${currentPinnedLocation}');
+                                                        pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeIn);
+                                                    },
+                                                    style: ElevatedButton.styleFrom(
+                                                      foregroundColor: Colors.white,
+                                                      backgroundColor: const Color(0xff1F41BB),
+                                                      minimumSize: const Size(131, 26), 
+                                                    ),
+                                                    child: const Text('Ride'),
+                                                  ),
+                                                ),
+                                                // if(showWalkWidget)
+                                                // Container(
+                                                //   child: Column(
+                                                //     children: [
+                                                //       Container(
+                                                //         padding: const EdgeInsets.only(left: 20.0),
+                                                //         alignment: Alignment.centerLeft,
+                                                //         child: const Text(
+                                                //           'Pin your walk destination',
+                                                //           style: TextStyle(
+                                                //             color: Colors.black,
+                                                //             fontSize: 12,
+                                                //             fontWeight: FontWeight.w600,
+                                                //           ),
+                                          
+                                                //         ),
+                                                //       )
+                                                //     ]
+                                                //   ),
+                            
+                                                // ),
+                                                ],
+                                              ),
+                                            
+                                            ],
+                                          ),
+                                        ],                              
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            //  if (showWalkWidget)
+                            //   Expanded(
+                            //     child: AnimatedSwitcher(
+                            //       duration: const Duration(milliseconds: 500), // Duration of transition
+                            //       transitionBuilder: (Widget child, Animation<double> animation) {
+                            //         return SlideTransition(
+                            //           position: Tween<Offset>(
+                            //             begin: const Offset(1, 0),  // Slide in from the right
+                            //             end: Offset.zero,  // Final position (center)
+                            //           ).animate(animation),
+                            //           child: FadeTransition(  // Add fade effect
+                            //             opacity: animation,
+                            //             child: child,
+                            //           ),
+                            //         );
+                            //       },
+                            //       child: SingleChildScrollView(
+                            //         key: ValueKey<bool>(showWalkWidget), // Ensures proper widget change
+                            //         controller: scrollController,
+                            //         child: Padding(
+                            //           padding: const EdgeInsets.all(5.0),
+                            //           child: Column(
+                            //             crossAxisAlignment: CrossAxisAlignment.start,
+                            //             children: [
+                            //               Container(
+                            //                 padding: const EdgeInsets.only(left: 20.0),
+                            //                 alignment: Alignment.centerLeft,
+                            //                 child: const Text(
+                            //                   'Pin your walk destination',
+                            //                   style: TextStyle(
+                            //                     color: Colors.black,
+                            //                     fontSize: 12,
+                            //                     fontWeight: FontWeight.w600,
+                            //                   ),
+                            //                 ),
+                            //               ),
+                            //             ],
+                            //           ),
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ),
+                            
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 10),
+                                  child: Container(
+                                    width: 60,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(Icons.arrow_back, size: 24),
+                                                  onPressed: () {
+                                                      backButtonPressedCount++;
+                                                      _goToPreviousPage();
+                                                    },
+                                                  ),
+                                                const Expanded(
+                                                  child: Center(
+                                                    child: Text(
+                                                      'Pin location',
+                                                      style: TextStyle(fontSize: 14), 
+                                                    ),
+                                                  ),
+                                                ),
+                                                if(backButtonPressedCount > 0)
+                                                IconButton(
+                                                  icon: const Icon(Icons.arrow_forward, size: 24),
+                                                  onPressed: () {
+                                                    backButtonPressedCount--;
+                                                    },
+                                                  ),
+                                              ],
+                                            ),
+                                          )
+                                          ,
+                                          Container(
+                                            alignment: Alignment.center,
+                                            padding: const EdgeInsets.symmetric(vertical: 20.0),
+                                            child: const Text(
+                                              'Where can we stop?',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: FloatingActionButton(
+                    onPressed: _focusOnLastPinnedLocation,
+                    backgroundColor: Colors.white,
+                    child: const Icon(Icons.location_searching_rounded),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-
-   Widget buildMap() {
-  return SizedBox(
-    width: double.infinity,
-    height: 200,
-    child: GoogleMap(
-      initialCameraPosition: _initialCameraPosition,
-      onMapCreated: (controller) {
-        _controller = controller;
-      },
-      onTap: _onMapTap,
-      markers: _selectedMarker != null ? {_selectedMarker!} : {},
-    ),
-  );
-}
-
-
-    Widget buildRide(){
-      return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                  
-                Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
-                    'Choose Transportation Mode',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  width: 363,
-                  height: 64,
-                  margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-                  
-                  child: DropdownButton<String>(
-                    value: selectedMode,
-                    hint: const Text('Select Mode'),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedMode = newValue;
-                      });
-                    },
-                    items: modes.map((String mode) {
-                      return DropdownMenuItem<String>(
-                        value: mode,
-                        child: Text(mode),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
-                    'Estimated Fare:',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-            height: 37,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _estiFareController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                hintText: 'Type here...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
-                    'Route',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Row (
-                children: [
-                  Container(
-                    margin: const EdgeInsets.all(10),
-                    height: 33,
-                    width: 149,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
-                          blurRadius: 4,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _fromRouteController,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                        hintText: 'Type here...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Container(
-                  margin: const EdgeInsets.all(5),
-                  alignment: Alignment.center,
-                  height: 48.89,
-                  width: 48.89,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: SvgPicture.asset('assets/icons/arrow.svg'),
-                ),
-
-                  Container(
-                    margin: const EdgeInsets.all(10),
-                    height: 33,
-                    width: 149,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xff1D1617).withOpacity(0.11),
-                          blurRadius: 4,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _toRouteController,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                        hintText: 'Type here...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                
-                ],
-                ),
-                const SizedBox(height: 10),
-
-                Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
-                    'Where to stop:',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-                Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-            height: 37,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _stoplocationController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                hintText: 'Type here...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-
-                const SizedBox(height: 10),
-
-                Container(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: const Text(
-                    'What is the next step?',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            
-                Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                              insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
-                               walkWidgets.add(buildWalk());
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
-                            ),
-                            child: const Text('Walk'),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                insertRideDetails(selectedMode!, _estiFareController.text, _fromRouteController.text, _toRouteController.text, _stoplocationController.text);
-                                rideWidgets.add(buildRide());
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
-                            ),
-                            child: const Text('Ride'),
-                          ),
-                        ),
-
-                        Container(
-                          margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                              doneWidgets.add(buildDone());
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(120, 26),
-                            ),
-                            child: const Text('Done'),
-                          ),
-                        ),
-                      ],
-                    ),
-              
-            ],
-          );              
-    }
-
-    Widget buildWalk(){
-      return Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.only(left: 20.0),
-            alignment: Alignment.centerLeft,
-            child: const Text(
-              'Walk to:',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-            const SizedBox(height: 10),
-                Container(
-            margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-            height: 37,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _walkToController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                hintText: 'Type here...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.only(left: 20.0),
-            alignment: Alignment.centerLeft,
-            child: const Text(
-              'What is the next step?',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-                    
-            Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(left: 20, top: 10, bottom: 10),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      
-                      walkWidgets.add(buildWalk());
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
-                  ),
-                  child: const Text('Walk'),
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      rideWidgets.add(buildRide());
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
-                  ),
-                  child: const Text('Ride'),
-                ),
-              ),
-
-              Container(
-                margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                    doneWidgets.add(buildDone());
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xff1F41BB),
-                    minimumSize: const Size(120, 26),
-                  ),
-                  child: const Text('Done'),
-                ),
-              ),
-            ],
-          ),
-    
-        ],
-      );
-    }
-
-    Widget buildDone(){
-      return Column(
-        children: [
-           Container(
-              padding: const EdgeInsets.only(left: 20.0),
-              child: const Text(
-                'Pin the end location:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          buildMap(),
-
-           Container(
-            padding: const EdgeInsets.only(left: 20.0),
-            child: const Text(
-              'What is the location called?',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 30.0),
-            height: 37,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _endLocNameController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                hintText: 'Type here...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-
-         Container(
-            margin: const EdgeInsets.only(left: 5, top: 10, bottom: 10),
-            child: ElevatedButton(
-              onPressed: () {
-                var location = _locationController.text;
-                var locationAddress = _address;
-                var locationName = _locationNameController.text;
-                var  walkTo = _walkToController.text;
-                var estiFare = _estiFareController.text;
-                var stopLocation = _stoplocationController.text;
-                var endLocation = _endLocController.text;
-                var endLocationName = _endLocNameController.text;
-                var toRoute = _toRouteController.text;
-                var fromRoute = _fromRouteController.text;
-
-              },
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: const Color(0xff1F41BB),
-                minimumSize: const Size(227, 26),
-              ),
-              child: const Text('Submit & Save'),
-            ),
-          ),
-
-        ],
-      );
-
-    }
 }
