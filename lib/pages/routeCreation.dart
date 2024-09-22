@@ -1,4 +1,5 @@
 import 'dart:core';
+import 'package:capstone/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -40,6 +41,9 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      _showDialog(context);
+    });
     //animation for bottom sheet
     // _animationController = AnimationController(
     //   vsync: this,
@@ -200,7 +204,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: (){
-
+            Navigator.of(context).push(_gotoDashboard());
           },
         ),
         title: const Text(
@@ -560,6 +564,74 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
           ),
         ],
       ),
+      
     );
   }
+  void _showDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true, 
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("PIN LOCATION",
+           style: TextStyle(
+            fontSize: 13,
+           fontWeight: FontWeight.bold
+           ),
+            textAlign: TextAlign.center,
+             ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min, 
+            children: [
+              Icon(
+                Icons.route_outlined,
+                size: 100,
+                color: Color.fromARGB(255, 151, 175, 255),
+              ),
+              SizedBox(height: 20),
+              Text("Pin the location you want to suggest!",
+               style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center, 
+              ),
+              
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+    // TransitionBuilder:  (context, animation, secondaryAnimation, child){
+    //   return FadeTransition(
+    //     opacity: animation,
+    //     child: child,
+    //   );
+    // },
+    // transitionDuration
+}
+Route _gotoDashboard(){
+      return PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => Dashboard(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+
+        }
+      );
+    }
 }

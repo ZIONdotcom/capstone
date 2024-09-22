@@ -1,7 +1,9 @@
+import 'package:capstone/pages/suggestPinLocation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'routeCreation.dart';
+import 'suggestPinLocation.dart';
 
 
 class Dashboard extends StatefulWidget {
@@ -327,6 +329,7 @@ class _DashboardState extends State<Dashboard> {
                         ),
                       onPressed: (){
                         //PIN SUGGESTION
+                        Navigator.of(context).push(_gotoSuggestPinLocation());
                       },  
                       label:const  Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +389,25 @@ class _DashboardState extends State<Dashboard> {
     Route _gotoRouteCreation(){
       return PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => RouteCreation(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+
+        }
+      );
+    }
+    Route _gotoSuggestPinLocation(){
+      return PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => SuggestPinLocation(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
