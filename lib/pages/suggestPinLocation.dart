@@ -20,10 +20,10 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
   Marker? _pinnedMarker;
   String? _address;
   String? selectedMode;
-  TextEditingController _establishmentController = TextEditingController();
-  TextEditingController _fareController = TextEditingController();
-  TextEditingController _fromRouteController = TextEditingController();
-  TextEditingController _toRouteController = TextEditingController();
+  final TextEditingController _establishmentController = TextEditingController();
+  final TextEditingController _fareController = TextEditingController();
+  final TextEditingController _fromRouteController = TextEditingController();
+  final TextEditingController _toRouteController = TextEditingController();
 
   bool _showEstablishment = true;
   bool _showOptions = false; // To control visibility of widgets
@@ -109,7 +109,7 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
                           },
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            backgroundColor: _showEstablishment ? Color.fromARGB(255, 121, 141, 211) : const Color(0xff1F41BB),
+                            backgroundColor: _showEstablishment ? const Color.fromARGB(255, 121, 141, 211) : const Color(0xff1F41BB),
                             minimumSize: const Size(120, 26),
                           ),
                           child: const Text(
@@ -129,7 +129,7 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
                           },
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            backgroundColor: !_showEstablishment ? Color.fromARGB(255, 121, 141, 211) : const Color(0xff1F41BB),
+                            backgroundColor: !_showEstablishment ? const Color.fromARGB(255, 121, 141, 211) : const Color(0xff1F41BB),
                             minimumSize: const Size(120, 26),
                           ),
                           child: const Text(

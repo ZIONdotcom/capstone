@@ -1,4 +1,5 @@
 import 'package:capstone/pages/dashboard.dart';
+import 'package:capstone/pages/scratch.dart';
 import 'package:flutter/material.dart';
 
 
