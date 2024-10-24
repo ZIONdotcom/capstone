@@ -1,4 +1,5 @@
 import 'package:capstone/pages/routeFinder2.dart';
+import 'package:capstone/pages/test.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -24,7 +25,7 @@ class _RouteFinderState extends State<RouteFinder> {
   FocusNode fromFocusNode = FocusNode();
   FocusNode toFocusNode = FocusNode();
   List<String> locationSuggestions = [];
-  final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI';
+  final apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
   late String lat, long;
   late String lat_origin, long_origin, lat_destination, long_destination;
 
@@ -47,27 +48,19 @@ class _RouteFinderState extends State<RouteFinder> {
         ),
       );
 
-      //     // builder: (context) => test(
-      //     //     latOrigin: lat_origin,
-      //     //     longOrigin: long_origin,
-      //     //     latDestination: lat_destination,
-      //     //     longDestination: long_destination,
-      //     //     destinationName: fromController.text,
-      //     //     originName: toController.text),
-      //   ),
-      // );
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => RouteStepsPrinter(
-      //         latOrigin: lat_origin,
-      //         longOrigin: long_origin,
-      //         latDestination: lat_destination,
-      //         longDestination: long_destination,
-      //         destinationName: fromController.text,
-      //         originName: toController.text),
-      //   ),
-      // );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Test(
+            latOrigin: lat_origin,
+            longOrigin: long_origin,
+            latDestination: lat_destination,
+            longDestination: long_destination,
+            destinationName: fromController.text,
+            originName: toController.text,
+          ),
+        ),
+      );
     }
   }
 

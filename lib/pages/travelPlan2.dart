@@ -11,8 +11,8 @@ class travelPlan2 extends StatefulWidget {
 }
 
 class _TravelPlan2State extends State<travelPlan2> {
-  final apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI';
-  
+  final apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+
   late String lat, long;
   TextEditingController controller = TextEditingController();
 
@@ -25,13 +25,16 @@ class _TravelPlan2State extends State<travelPlan2> {
       });
       return;
     }
-    final String url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=$apiKey&components=country:ph';
+    final String url =
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=$apiKey&components=country:ph';
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
-      final List<dynamic> predictions = json.decode(response.body)['predictions'];
+      final List<dynamic> predictions =
+          json.decode(response.body)['predictions'];
       setState(() {
-        locationSuggestions = predictions.map((p) => p['description'] as String).toList();
+        locationSuggestions =
+            predictions.map((p) => p['description'] as String).toList();
       });
     } else {
       setState(() {
@@ -42,7 +45,8 @@ class _TravelPlan2State extends State<travelPlan2> {
 
   Future<void> fetchLatLong(String placeDescription) async {
     final encodedDescription = Uri.encodeComponent(placeDescription);
-    final String url = 'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedDescription&key=$apiKey';
+    final String url =
+        'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedDescription&key=$apiKey';
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -55,8 +59,8 @@ class _TravelPlan2State extends State<travelPlan2> {
           String lat = location['lat'].toString();
           String long = location['lng'].toString();
 
-           // Return to the previous screen with the selected location data
-             Navigator.pop(context, {
+          // Return to the previous screen with the selected location data
+          Navigator.pop(context, {
             'location': placeDescription,
             'latitude': lat,
             'longitude': long,
@@ -65,7 +69,8 @@ class _TravelPlan2State extends State<travelPlan2> {
           print("No results found for the given place description.");
         }
       } else {
-        print("Failed to fetch latitude and longitude. Status code: ${response.statusCode}");
+        print(
+            "Failed to fetch latitude and longitude. Status code: ${response.statusCode}");
         print("Response body: ${response.body}");
       }
     } catch (e) {
@@ -78,7 +83,8 @@ class _TravelPlan2State extends State<travelPlan2> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-        padding: const EdgeInsets.only(top: 40.0, left: 10, right: 10, bottom: 10),
+        padding:
+            const EdgeInsets.only(top: 40.0, left: 10, right: 10, bottom: 10),
         child: Column(
           children: [
             Container(
@@ -110,11 +116,13 @@ class _TravelPlan2State extends State<travelPlan2> {
               ),
               child: TextField(
                 controller: controller,
-                onChanged: fetchSuggestions, // Fetch suggestions as the user types
+                onChanged:
+                    fetchSuggestions, // Fetch suggestions as the user types
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                   hintText: 'type here',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5),
@@ -123,7 +131,6 @@ class _TravelPlan2State extends State<travelPlan2> {
                 ),
               ),
             ),
-            
             Expanded(
               child: ListView.builder(
                 itemCount: locationSuggestions.length,
@@ -131,7 +138,7 @@ class _TravelPlan2State extends State<travelPlan2> {
                   return ListTile(
                     title: Text(locationSuggestions[index]),
                     onTap: () {
-                       String selectedLocation = locationSuggestions[index];
+                      String selectedLocation = locationSuggestions[index];
                       controller.text = selectedLocation;
                       setState(() {
                         locationSuggestions.clear();
@@ -142,8 +149,6 @@ class _TravelPlan2State extends State<travelPlan2> {
                 },
               ),
             ),
-
-
           ],
         ),
       ),

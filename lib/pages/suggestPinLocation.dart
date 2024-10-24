@@ -33,12 +33,13 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
 
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_){
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _showDialog(context);
     });
   }
+
   @override
   void dispose() {
     _googleMapController.dispose();
@@ -543,7 +544,8 @@ class _BuildTerminalState extends State<BuildTerminal> {
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
               hintText: 'Type here...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(5),
@@ -865,21 +867,20 @@ class _BuildTerminalState extends State<BuildTerminal> {
                 ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Please fill out all fields.'),
-                  duration: Duration(seconds: 2), // Adjust the duration as needed
-                  ),
-                );
-              }               
-            
-            },
-            style: ElevatedButton.styleFrom(
-              alignment: Alignment.center,
-              foregroundColor: Colors.white,
-              backgroundColor: const Color(0xff1F41BB),
-              minimumSize: const Size(120, 26),
-            ),
-            child: const Text('Submit'),
+                  duration:
+                      Duration(seconds: 2), // Adjust the duration as needed
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            alignment: Alignment.center,
+            foregroundColor: Colors.white,
+            backgroundColor: const Color(0xff1F41BB),
+            minimumSize: const Size(120, 26),
           ),
-          
+          child: const Text('Submit'),
+        ),
       ],
     );
   }
@@ -1042,7 +1043,8 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
               hintText: 'Type here...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(5),
@@ -1104,7 +1106,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
         const SizedBox( height: 20),
         //ImagePickerButton(),
         Container(
-         padding: const EdgeInsets.only(left: 16.0),
+          padding: const EdgeInsets.only(left: 16.0),
           child: const Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -1214,10 +1216,12 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
+                const SnackBar(
                   content: Text('Please fill out all fields.'),
                   duration: Duration(seconds: 2),
                 ),
               );
+            }
             }
           },
           style: ElevatedButton.styleFrom(

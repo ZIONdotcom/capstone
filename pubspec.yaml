@@ -45,10 +45,12 @@ dependencies:
   googleapis: ^11.0.0
   googleapis_auth: ^1.4.1
   font_awesome_flutter: ^10.7.0
-  
+  permission_handler: ^11.0.0
+  # flutter tlocation: ^6.0.0
   geolocator: ^8.2.1
   flutter_riverpod: ^2.5.1
   uuid: ^4.4.2
+  
 
   google_maps_webservice: any
   provider: any

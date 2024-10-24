@@ -55,7 +55,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_){
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _showDialog(context);
     });
     // ApiService().fetchData().then((fetchedData){
@@ -101,14 +101,15 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
 
 //GET ADDRESS OF PINNED LOCATION
   Future<String> _getAddress(LatLng position) async {
-    try{
-      List<Placemark> placemarks  = await placemarkFromCoordinates(position.latitude, position.longitude);
-      if(placemarks.isNotEmpty){
+    try {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
         return '${placemark.name},${placemark.locality}, ${placemark.administrativeArea}';
       }
       return 'No address found';
-    } catch (e){
+    } catch (e) {
       return 'Error retrieving address';
     }
   }
@@ -116,11 +117,12 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
+
   void _addOrigin(LatLng pinnedLocation) async {
     currentPinnedLocation = pinnedLocation;
     String address = await _getAddress(pinnedLocation);
     setState(() {
-      if(_originMarker.isNotEmpty){
+      if (_originMarker.isNotEmpty) {
         _originMarker.clear();
       }
       _originMarker.add(Marker(
@@ -132,35 +134,33 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         ),
       ));
     });
-    
   }
+
   void _addMarkerIcon(LatLng pinnedLocation) {
     setState(() {
-      if(_markers.length < stepNumber){
+      if (_markers.length < stepNumber) {
         //add pin to list
         pinnedLocations.add(pinnedLocation);
 
         //add marker to markers set
         _markers.add(Marker(
-        markerId: MarkerId(pinnedLocation.toString()),
-        position: pinnedLocation,
-        infoWindow: InfoWindow(
-          title: "Step $stepNumber",
-        ),
-      ));
-      }
-      else{
+          markerId: MarkerId(pinnedLocation.toString()),
+          position: pinnedLocation,
+          infoWindow: InfoWindow(
+            title: "Step $stepNumber",
+          ),
+        ));
+      } else {
         // Marker(
         // markerId: MarkerId(pinnedLocation.toString()),
         // position: pinnedLocation,
         // infoWindow: InfoWindow(
         //   title: "Step $stepNumber",
         // );
-      
       }
 //temporary polyline and marker
 
-    //add polyline
+      //add polyline
       if (pinnedLocations.length > 1) {
         _polylines.add(Polyline(
           polylineId: PolylineId(pinnedLocation.toString()),
@@ -176,7 +176,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   //animate camera to last pinned location
   void _focusOnLastPinnedLocation() async {
     if (pinnedLocations.isNotEmpty && mapController != null) {
-       mapController!.animateCamera(
+      mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(pinnedLocations.last, 14.0),
       );
     }
@@ -185,13 +185,12 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   //sheetsize for one quesstion (ex. What is this location called kinemeerut)
   // void updateSheetSizes(double initialSize, double minChildSize, double maxChildSize) {
   //   if(mounted){
-       
+
   //       setState(() {
   //         sheetSizes[0] = initialSize;
   //         sheetSizes[1] = minChildSize;
   //         sheetSizes[2] = maxChildSize;
 
-        
   //       print("la");
   //       print(sheetSizes);
   //       });
@@ -200,9 +199,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   //   else{
   //     print('not mounted');
   //   }
-   
-    
-        
 
   // }
 
@@ -221,7 +217,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   //   return textOriginIsNotEmpty;
   // }
 
-
   // void _goToNextPage() {
   //   if(backButtonPressedCount == 1){backButtonPressedCount--;}
   //   pageController.nextPage(
@@ -235,7 +230,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   //     curve: Curves.easeInOut,
   //   );
   // }
-  
+
 // void updateSheetSizes(double initialSize, double minChildSize, double maxChildSize) {
 //     setState(() {
 //       sheetSizes[0] = initialSize;
@@ -272,7 +267,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
           ),
         ),
       ),
-
       body: Column(
         children: [
           Expanded(
@@ -287,15 +281,13 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                       target: _initialCameraPosition,
                       zoom: 12.0,
                     ),
-                    markers: {..._originMarker,..._markers},
+                    markers: {..._originMarker, ..._markers},
                     polylines: _polylines,
                     onTap: (LatLng pinnedLocation) {
-                      if(pinnedLocations.isEmpty){
+                      if (pinnedLocations.isEmpty) {
                         _addOrigin(pinnedLocation);
                         print('tap');
-                              
-                      }
-                      else{
+                      } else {
                         _addMarkerIcon(pinnedLocation);
                       }
                       mapClicked = true;
@@ -304,13 +296,13 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                 ),
                 if (mapClicked)
                   DraggableScrollableSheet(
-                   // key: SheetSizeKey,
+                    // key: SheetSizeKey,
                     initialChildSize: sheetSizes[0],
                     minChildSize: sheetSizes[1],
                     maxChildSize: sheetSizes[2],
                     builder: (context, scrollController) {
                       return ClipRRect(
-                         borderRadius: const BorderRadius.only(
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20.0),
                           topRight: Radius.circular(20.0),
                         ),
@@ -325,72 +317,76 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                             ],
                           ),
                           child: Navigator(
-                            onGenerateRoute: (RouteSettings settings){
+                            onGenerateRoute: (RouteSettings settings) {
                               Widget page = Page1(scrollController);
                               //final args = settings.arguments as Map<int,List>;
                               //steps = args;
-                              switch(settings.name){
+                              switch (settings.name) {
                                 case '/walk':
-                                  page = WalkWidget(scrollController: scrollController,
-                                  onSubmit: (String x){
-
-                                  },
-                                  onPop: (){
-                                    WidgetsBinding.instance.addPostFrameCallback((_){
-                                      setState(() {
-                                      sheetSizes[0] = 0.35;
-                                      sheetSizes[1] = 0.1;
-                                      sheetSizes[2] = 0.35;
-                                    });
-                                    });
-                                    
-                                  });
-                                  WidgetsBinding.instance.addPostFrameCallback((_){
-                                      setState(() {
-                                        sheetSizes[0] = 0.40;
-                                        sheetSizes[1] = 0.1;
-                                        sheetSizes[2] = 0.40;
-                                      });
-                                    });
-                                  
-                                  break;
-                                  case '/ride':
-                                    page = RideWidget(scrollController: scrollController);
-                                    WidgetsBinding.instance.addPostFrameCallback((_){
+                                  page = WalkWidget(
+                                      scrollController: scrollController,
+                                      onSubmit: (String x) {},
+                                      onPop: () {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
                                           setState(() {
-                                            sheetSizes[0] = 0.70;
+                                            sheetSizes[0] = 0.35;
                                             sheetSizes[1] = 0.1;
-                                            sheetSizes[2] = 0.70;
+                                            sheetSizes[2] = 0.35;
                                           });
                                         });
-                                    break;
+                                      });
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    setState(() {
+                                      sheetSizes[0] = 0.40;
+                                      sheetSizes[1] = 0.1;
+                                      sheetSizes[2] = 0.40;
+                                    });
+                                  });
 
-
+                                  break;
+                                case '/ride':
+                                  page = RideWidget(
+                                      scrollController: scrollController);
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    setState(() {
+                                      sheetSizes[0] = 0.70;
+                                      sheetSizes[1] = 0.1;
+                                      sheetSizes[2] = 0.70;
+                                    });
+                                  });
+                                  break;
                               }
                               return PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  page,
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0); // Wipe in from right
-                                const end = Offset.zero;
-                                const curve = Curves.ease;
-                        
-                                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                                var offsetAnimation = animation.drive(tween);
-                        
-                                return SlideTransition(
-                                  position: offsetAnimation,
-                                  child: child,
-                                );
-                              },
-                            );
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) =>
+                                        page,
+                                transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) {
+                                  const begin =
+                                      Offset(1.0, 0.0); // Wipe in from right
+                                  const end = Offset.zero;
+                                  const curve = Curves.ease;
+
+                                  var tween = Tween(begin: begin, end: end)
+                                      .chain(CurveTween(curve: curve));
+                                  var offsetAnimation = animation.drive(tween);
+
+                                  return SlideTransition(
+                                    position: offsetAnimation,
+                                    child: child,
+                                  );
+                                },
+                              );
                             },
                           ),
                           // child: PageView(
                           //   controller: pageController, // Use the page controller
                           // physics: const NeverScrollableScrollPhysics(),
                           //   children: [
-                              
+
                           //     Column(
                           //       //fist page
                           //       children: [
@@ -406,7 +402,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                           //           ),
                           //         ),
                           //         Expanded(
-                                    
+
                           //           child: SingleChildScrollView(
                           //             controller: scrollController,
                           //             child: Padding(
@@ -485,13 +481,13 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                           //                                 print('added ${currentPinnedLocation}');
                           //                                 _fixedSheetSize();
                           //                                 pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeIn);
-                        
+
                           //                                 //showWalkWidget = true;
                           //                             },
                           //                             style: ElevatedButton.styleFrom(
                           //                               foregroundColor: Colors.white,
                           //                               backgroundColor: const Color(0xff1F41BB),
-                          //                               minimumSize: const Size(131, 26), 
+                          //                               minimumSize: const Size(131, 26),
                           //                             ),
                           //                              child: const Text('Walk'),
                           //                           ),
@@ -507,18 +503,18 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                           //                             style: ElevatedButton.styleFrom(
                           //                               foregroundColor: Colors.white,
                           //                               backgroundColor: const Color(0xff1F41BB),
-                          //                               minimumSize: const Size(131, 26), 
+                          //                               minimumSize: const Size(131, 26),
                           //                             ),
                           //                             child: const Text('Ride'),
                           //                           ),
                           //                         ),
-                        
+
                           //                         ],
                           //                       ),
-                                              
+
                           //                     ],
                           //                   ),
-                          //                 ],                              
+                          //                 ],
                           //               ),
                           //             ),
                           //           ),
@@ -561,7 +557,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                           //                           child: Center(
                           //                             child: Text(
                           //                               'Pin location',
-                          //                               style: TextStyle(fontSize: 14), 
+                          //                               style: TextStyle(fontSize: 14),
                           //                             ),
                           //                           ),
                           //                         ),
@@ -614,24 +610,22 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
           ),
         ],
       ),
-      
     );
   }
+
   void _showDialog(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: true, 
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("PIN LOCATION",
-           style: TextStyle(
-            fontSize: 13,
-           fontWeight: FontWeight.bold
-           ),
+          title: const Text(
+            "PIN LOCATION",
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
-             ),
+          ),
           content: const Column(
-            mainAxisSize: MainAxisSize.min, 
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.route_outlined,
@@ -639,11 +633,11 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                 color: Color.fromARGB(255, 151, 175, 255),
               ),
               SizedBox(height: 20),
-              Text("Pin the location you want to suggest!",
-               style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center, 
+              Text(
+                "Pin the location you want to suggest!",
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
               ),
-              
             ],
           ),
           actions: <Widget>[
@@ -665,7 +659,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
     //   );
     // },
     // transitionDuration
-}
+  }
 // Route _gotoDashboard(){
 //       return PageRouteBuilder(
 //         pageBuilder: (context, animation, secondaryAnimation) => Dashboard(),
@@ -686,6 +680,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
 //       );
 //     }
 }
+
 class Page1 extends StatefulWidget {
   final ScrollController _scrollController;
   const Page1(this._scrollController, {super.key});
@@ -693,7 +688,8 @@ class Page1 extends StatefulWidget {
   @override
   State<Page1> createState() => _Page1State();
 }
-class _Page1State extends State<Page1>{
+
+class _Page1State extends State<Page1> {
   final _MyWidgetState mainwidget = _MyWidgetState();
   // StoresheetSizes storesheetSizes = StoresheetSizes();
   TextEditingController textOriginController = TextEditingController();
@@ -701,22 +697,21 @@ class _Page1State extends State<Page1>{
   // _Page1State(this._scrollController);
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     //to identify if the textOrigin is empty or not
     textOriginController.addListener((){
       WidgetsBinding.instance.addPostFrameCallback((_){
         setState(() {
-        textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
-      //print(textOriginIsNotEmpty.toString());
+          textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
+          //print(textOriginIsNotEmpty.toString());
+        });
       });
-      });
-      
     });
   }
   
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
         controller: widget._scrollController,
@@ -866,11 +861,11 @@ class _WalkWidgetState extends State<WalkWidget> {
   void initState() {
     super.initState();
     // Initialize the TextEditingController
-    descriptionController.addListener((){
+    descriptionController.addListener(() {
       // WidgetsBinding.instance.addPersistentFrameCallback((_){
-        setState(() {
-          descriptionTextIsNotEmpty = descriptionController.text.isNotEmpty;
-        });
+      setState(() {
+        descriptionTextIsNotEmpty = descriptionController.text.isNotEmpty;
+      });
       // });
     });
   }
@@ -949,12 +944,14 @@ class _WalkWidgetState extends State<WalkWidget> {
               const SizedBox(height: 12),
               const Padding(
                 padding: EdgeInsets.only(left: 15.0),
-                child:  Text('Description:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),),
+                child: Text(
+                  'Description:',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               Padding(
@@ -967,8 +964,8 @@ class _WalkWidgetState extends State<WalkWidget> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 15),
                     hintText: 'Type here...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(5),
@@ -987,69 +984,72 @@ class _WalkWidgetState extends State<WalkWidget> {
                   ),
                 ),
               ),
-              if(descriptionTextIsNotEmpty)
-              Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'What is the next step?',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                      margin: const EdgeInsets.only(left: 15, right: 5, top: 10, bottom: 10),
-                      child: ElevatedButton(
-                        onPressed: (){
-                          Navigator.of(context).pushNamed('/walk');
-                          },
-                        style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xff1F41BB),
-                        minimumSize: const Size(100, 26), 
-                        ),
-                        child: const Text('Walk'),
-                      ),
-                    ),
+              if (descriptionTextIsNotEmpty)
+                Column(
+                  children: [
                     Container(
-                      margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
-                      child: ElevatedButton(
-                      onPressed: (){
-                        Navigator.of(context).pushNamed('/ride');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xff1F41BB),
-                        minimumSize: const Size(100, 26), 
-                      ),
-                      child: const Text('Ride'),
-                    ),
-                  ),
-                  Container(
-                      margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
-                      child: ElevatedButton(
-                        onPressed: (){
-                          Navigator.of(context).pushNamed('/done');
-                          },
-                        style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xff1F41BB),
-                        minimumSize: const Size(100, 26), 
+                      padding: const EdgeInsets.only(left: 16.0),
+                      alignment: Alignment.centerLeft,
+                      child: const Text(
+                        'What is the next step?',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
-                        child: const Text('Done'),
                       ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(
+                              left: 15, right: 5, top: 10, bottom: 10),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed('/walk');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(100, 26),
+                            ),
+                            child: const Text('Walk'),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.only(
+                              left: 5, right: 5, top: 10, bottom: 10),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed('/ride');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(100, 26),
+                            ),
+                            child: const Text('Ride'),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.only(
+                              left: 5, right: 5, top: 10, bottom: 10),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed('/done');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xff1F41BB),
+                              minimumSize: const Size(100, 26),
+                            ),
+                            child: const Text('Done'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  ),
-                ],
-              )
+                )
             ],
           ),
         ),
@@ -1057,6 +1057,7 @@ class _WalkWidgetState extends State<WalkWidget> {
     );
   }
 }
+
 class RideWidget extends StatefulWidget {
   final ScrollController scrollController;
   const RideWidget({super.key, required this.scrollController});
@@ -1068,23 +1069,37 @@ class RideWidget extends StatefulWidget {
 class _RideWidgetState extends State<RideWidget> {
   TextEditingController descriptionController = TextEditingController();
   bool descriptionTextIsNotEmpty = false;
-  List <String> vehicles = ['tricycle','jeep','e-jeep','bus'];
-  List <String> busCorporations = ['German Espiritu','Victory Liner', 'P2P'];
-  List<String> jeepRoutes = ['Bocaue','Lolomboy','Balagtas','Plaridel','Marilao','Guiguinto','Meycauayan'];
-  List<String> busRoutes = ['Balagtas','Bulakan','Balagtas','Plaridel','Monumento'];
+  List<String> vehicles = ['tricycle', 'jeep', 'e-jeep', 'bus'];
+  List<String> busCorporations = ['German Espiritu', 'Victory Liner', 'P2P'];
+  List<String> jeepRoutes = [
+    'Bocaue',
+    'Lolomboy',
+    'Balagtas',
+    'Plaridel',
+    'Marilao',
+    'Guiguinto',
+    'Meycauayan'
+  ];
+  List<String> busRoutes = [
+    'Balagtas',
+    'Bulakan',
+    'Balagtas',
+    'Plaridel',
+    'Monumento'
+  ];
   List<bool> checkboxBusTracker = [];
   List<bool> checkboxJeepRoutesTracker = [];
   List<bool> checkboxBusRoutesTracker = [];
   
   //int listNumber = 0;
 
-  String ? selectedValue;
+  String? selectedValue;
   @override
   void initState() {
     super.initState();
     // Initialize the TextEditingController
-    descriptionController.addListener((){
-      WidgetsBinding.instance.addPersistentFrameCallback((_){
+    descriptionController.addListener(() {
+      WidgetsBinding.instance.addPersistentFrameCallback((_) {
         setState(() {
           descriptionTextIsNotEmpty = descriptionController.text.isNotEmpty;
         });
@@ -1094,22 +1109,25 @@ class _RideWidgetState extends State<RideWidget> {
     _generateBusCorpTracker();
     _generateBusRoutesTracker();
   }
-  void _generateJeepRoutesTracker(){
-    for(int i = 0; i < jeepRoutes.length; i++){
+
+  void _generateJeepRoutesTracker() {
+    for (int i = 0; i < jeepRoutes.length; i++) {
       checkboxJeepRoutesTracker.add(false);
     }
   }
-  void _generateBusCorpTracker(){
-    for(int i = 0; i < busCorporations.length; i++){
+
+  void _generateBusCorpTracker() {
+    for (int i = 0; i < busCorporations.length; i++) {
       checkboxBusTracker.add(false);
     }
   }
-  void _generateBusRoutesTracker(){
-    for(int i = 0; i < busRoutes.length; i++){
+
+  void _generateBusRoutesTracker() {
+    for (int i = 0; i < busRoutes.length; i++) {
       checkboxBusRoutesTracker.add(false);
     }
   }
-    
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1206,33 +1224,35 @@ class _RideWidgetState extends State<RideWidget> {
               // ),
               const Padding(
                 padding: EdgeInsets.only(left: 15.0),
-                child:  Text('Mode of Transportation:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),),
+                child: Text(
+                  'Mode of Transportation:',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               Container(
-                padding: const EdgeInsets.only(left: 20,right: 160),
+                padding: const EdgeInsets.only(left: 20, right: 160),
                 alignment: Alignment.centerLeft,
                 child: DropdownButtonFormField<String>(
                   value: selectedValue,
                   hint: const Text('Select mode',style: TextStyle(fontSize: 13)),
                   // isExpanded: true,
-                  items: vehicles.map((String item){
+                  items: vehicles.map((String item) {
                     return DropdownMenuItem<String>(
                       value: item,
                       child: Text(item,style: const TextStyle(fontSize: 13)));
                   }).toList(),
-                  onChanged: (String? newValue){
+                  onChanged: (String? newValue) {
                     setState(() {
                       selectedValue = newValue;
                     });
                   },
                   // underline: Container(
                   //   height: 2,
-                  //   color: Colors.blue, 
+                  //   color: Colors.blue,
                   // ),
                 ),
               ),
@@ -1387,4 +1407,3 @@ class _RideWidgetState extends State<RideWidget> {
     );
   }
 }
-
