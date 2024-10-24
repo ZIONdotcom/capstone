@@ -1216,12 +1216,10 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                const SnackBar(
                   content: Text('Please fill out all fields.'),
                   duration: Duration(seconds: 2),
                 ),
               );
-            }
             }
           },
           style: ElevatedButton.styleFrom(
