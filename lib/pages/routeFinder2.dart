@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'routeFinder.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/pages/routefinder3.dart';
+import 'package:capstone/pages/routeCreation.dart';
+import 'dart:math';
+import 'package:capstone/step_model.dart';
 
 class RouteFinder2 extends StatefulWidget {
   final String latOrigin, longOrigin;
@@ -15,14 +20,14 @@ class RouteFinder2 extends StatefulWidget {
   final String destinationName;
 
   const RouteFinder2({
-    Key? key,
+    super.key,
     required this.latOrigin,
     required this.longOrigin,
     required this.latDestination,
     required this.longDestination,
     required this.destinationName,
     required this.originName,
-  }) : super(key: key);
+  });
 
   // const RouteFinder2({super.key});
 
@@ -30,8 +35,168 @@ class RouteFinder2 extends StatefulWidget {
   _RouteFinderState2 createState() => _RouteFinderState2();
 }
 
+//Functions that working or not:
+//- NearestMainRoad | it tells nearest roads but not main road
+//gps
+//steps - wala pang first step, nakakadd na ng step pero dipa accurate
+// if else ng tricycle - pwedeng maiba algorithm neto
+// compute ng distance from road
+//
+
 class _RouteFinderState2 extends State<RouteFinder2> {
-  final String apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI';
+  //map
+  final CameraPosition _initialCameraPosition = const CameraPosition(
+    target: LatLng(14.831582, 120.903786), // Default initial position
+    zoom: 11.5, // Default zoom level
+  );
+
+  //add step to the list
+  List<dynamic> steps = [];
+  //if there is a tricycle
+  late bool tricycle;
+  //late bool isWalk;
+
+  //steps data
+  void walkStep(String instruction, LatLng endlocation) {
+    steps.add(WalkStepModel(
+      instruction: instruction,
+      endlocation: endlocation,
+      // Add any additional requirements if needed
+    ));
+  }
+
+  void transportationStep(String transportation, double fare, String time,
+      LatLng geton, LatLng getoff) {
+    steps.add(TransportStepModel(
+      transportation: transportation,
+      fare: fare,
+      time: time,
+      geton: geton,
+      getoff: getoff,
+    ));
+  }
+
+  //distance walk math
+  late double distanceMainRoad;
+  late double distanceInMeter = 0.0;
+  double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Radius of the Earth in kilometers
+    final dLat = _degreesToRadians(lat2 - lat1);
+    final dLon = _degreesToRadians(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c; // Distance in kilometers
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * pi / 180;
+  }
+
+  //roads
+  late String roadLat;
+  late String roadLng;
+  // Function to get nearest road using Google Maps Roads API
+  Future<void> getNearestRoad(double latitude, double longitude) async {
+    final String url =
+        'https://roads.googleapis.com/v1/snapToRoads?path=$latitude,$longitude&key=$apiKey';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Handle the response data
+      if (data['snappedPoints'].isNotEmpty) {
+        var nearestRoad = data['snappedPoints'][0];
+        roadLat = nearestRoad['location']['latitude'].toString();
+        roadLng = nearestRoad['location']['longitude'].toString();
+        print('Nearest Road: ${nearestRoad['location']}');
+
+        // Now calculate the distance once the roadLat and roadLng are available
+        if (lat.isNotEmpty && long.isNotEmpty) {
+          double distanceMainRoad = haversineDistance(
+            double.parse(lat),
+            double.parse(long),
+            double.parse(roadLat),
+            double.parse(roadLng),
+          );
+          distanceInMeter = distanceMainRoad * 1000;
+
+          print(
+              'haaaaaaaaaaaaaaaaaaaaaaaaaaa----------------------------- $roadLat , $roadLng');
+          print('Distance to nearest main road: $distanceMainRoad');
+          print(
+              'Distance to nearest main road: ${distanceInMeter.toStringAsFixed(2)} meters');
+        } else {
+          print(
+              'Error: Unable to calculate distance, lat/long values are missing.');
+        }
+      } else {
+        print('No roads found nearby.');
+      }
+    } else {
+      print('Failed to get nearest road: ${response.statusCode}');
+    }
+  }
+
+  late double originlat;
+  late double originlong;
+  late double destinationlat;
+  late double destinationlong;
+  late double origin;
+  late double destination;
+// Main function to check nearest road and terminals
+  Future<void> checkNearest() async {
+    Position userLocation = await getCurrentLocation();
+
+    originlat = double.parse(widget.latOrigin);
+    originlong = double.parse(widget.longOrigin);
+    destinationlat = double.parse(widget.latDestination);
+    destinationlong = double.parse(widget.longDestination);
+
+    // Get nearest road
+    await getNearestRoad(originlat, originlong);
+    print('srfgswrgwr $originlat , $originlong');
+
+    // // Find nearby public terminals
+    // await findNearbyTerminals(userLocation.latitude, userLocation.longitude);
+  }
+
+  //gps
+  late String lat;
+  late String long;
+  Future<Position> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location service are disabled');
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permission is denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request');
+    }
+
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+  }
+
+  GoogleMapController? mapController;
+  List<LatLng> polylineCoordinates = [];
+  final Set<Polyline> _polylines = {};
+
+  //late String lat_origin, long_origin, lat_destination, long_destination;
+  final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
   //swap
   bool isSwapped = false;
   final TextEditingController _controllerTo = TextEditingController();
@@ -41,7 +206,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   void _navigateToSearchPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RouteFinder()),
+      MaterialPageRoute(builder: (context) => const RouteFinder()),
     );
   }
 
@@ -53,33 +218,97 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   //end swap ----------------------------------------------------------
 
   //marker
-  Set<Marker> _markers = {};
+  //final Set<Marker> _markers = {};
+  Set<Marker> markers = {};
 
-  //map
-  CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(14.831582, 120.903786), // Default initial position
-    zoom: 11.5, // Default zoom level
-  );
+  //gps livelocation ------------- if want ng custom marker
+  // void liveLocation() {
+  //   LocationSettings locationSettings = const LocationSettings(
+  //     accuracy: LocationAccuracy.high,
+  //     distanceFilter: 100,
+  //   );
 
-  GoogleMapController? mapController;
-  List<LatLng> polylineCoordinates = [];
-  final Set<Polyline> _polylines = {};
+  //   Geolocator.getPositionStream(locationSettings: locationSettings)
+  //       .listen((Position position) {
+  //     lat = position.latitude.toString();
+  //     long = position.longitude.toString();
+
+  //     setState(() {
+  //       print('Latitude: $lat, Longtitude: $long ====== Location Updates');
+  //       markers.clear();
+  //       markers.add(Marker(
+  //         markerId: MarkerId('current_location'),
+  //         position: LatLng(position.latitude, position.longitude),
+  //         infoWindow: InfoWindow(title: 'Current Location'),
+  //         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+  //       ));
+  //       mapController?.animateCamera(CameraUpdate.newLatLng(
+  //           LatLng(position.latitude, position.longitude)));
+  //     });
+  //   });
+  // }
+  // add step list
+  Future<void> addStep() async {
+    if (distanceInMeter < 200 ||
+        (distanceInMeter >= 200 && tricycle == false)) {
+      // walk == true
+      LatLng endwalk = LatLng(double.parse(roadLat), double.parse(roadLng));
+      String endwalkAddress = await getAddressFromLatLng(
+          double.parse(roadLat), double.parse(roadLng));
+      walkStep('Walk to $endwalkAddress', endwalk);
+
+      for (var s in steps) {
+        print('${s}eyyyyyyyyyyyyy'); // This will now print meaningful details
+      }
+
+      print(
+          'end walk------------------ $endwalk and $endwalkAddress ------------=====================');
+    } else if (distanceInMeter >= 200 && tricycle == true) {
+      //walk = false
+      print('noooooooooooooooooooooooo');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _controllerTo.text = widget.originName;
+    _controllerFrom.text = widget.destinationName;
+
+    //gps
+    getCurrentLocation().then(
+      (value) {
+        lat = '${value.latitude}';
+        long = '${value.longitude}';
+        setState(() {
+          print('Latitude: $lat, Longtitude: $long');
+          markers.add(Marker(
+            markerId: const MarkerId('current_location'),
+            position: LatLng(value.latitude, value.longitude),
+            infoWindow: const InfoWindow(title: 'Current Location'),
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          ));
+        });
+        // liveLocation();
+      },
+    );
+
     fetchRoute();
-    _controllerTo.text = '${widget.originName}';
-    _controllerFrom.text = '${widget.destinationName}';
-    _setCustomMarkerIcon();
     getRoutes();
+
+    _setCustomMarkerIcon();
+
+    checkNearest().then((_) {
+      addStep();
+    });
   }
 
   // marker icon
   BitmapDescriptor? customIcon;
   void _setCustomMarkerIcon() async {
     customIcon = await BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(
+        const ImageConfiguration(
             size: Size(15, 15)), // You can adjust the size if needed
         'assets/icons/dot.png');
   }
@@ -106,13 +335,13 @@ class _RouteFinderState2 extends State<RouteFinder2> {
             polylineCoordinates = decodePolyline(polyline);
 
             // Clear existing markers and polylines
-            _markers.clear();
+
             _polylines.clear();
 
             setState(() {
               _polylines.add(
                 Polyline(
-                  polylineId: PolylineId('route'),
+                  polylineId: const PolylineId('route'),
                   points: polylineCoordinates,
                   color: Colors.blue,
                   width: 5,
@@ -127,23 +356,23 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               final LatLng endLocation = polylineCoordinates.last;
 
               setState(() {
-                _markers.add(
-                  Marker(
-                    markerId: MarkerId('start_marker'),
-                    position: startLocation,
-                    icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                    infoWindow: InfoWindow(title: 'Start Location'),
-                  ),
-                );
+                // _markers.add(
+                //   Marker(
+                //     markerId: const MarkerId('start_marker'),
+                //     position: startLocation,
+                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
+                //     infoWindow: const InfoWindow(title: 'Start Location'),
+                //   ),
+                // );
 
-                _markers.add(
-                  Marker(
-                    markerId: MarkerId('end_marker'),
-                    position: endLocation,
-                    icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                    infoWindow: InfoWindow(title: 'End Location'),
-                  ),
-                );
+                // _markers.add(
+                //   Marker(
+                //     markerId: const MarkerId('end_marker'),
+                //     position: endLocation,
+                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
+                //     infoWindow: const InfoWindow(title: 'End Location'),
+                //   ),
+                // );
               });
             }
           });
@@ -201,6 +430,8 @@ class _RouteFinderState2 extends State<RouteFinder2> {
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&mode=transit&alternatives=true&key=$apiKey';
 
+    print('Fetching URL: $url');
+
     try {
       final response = await http.get(Uri.parse(url));
 
@@ -248,15 +479,57 @@ class _RouteFinderState2 extends State<RouteFinder2> {
 
   List<Map<String, dynamic>> publicTransportRoutes = [];
 
+  //latlng to human readable address
+  Future<String> getAddressFromLatLng(double latitude, double longitude) async {
+    try {
+      // Get the list of placemarks from the coordinates
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(latitude, longitude);
+
+      // Get the first placemark (usually the most accurate)
+      Placemark place = placemarks[0];
+
+      // Return a more structured format similar to Google Maps
+      // Example: "Place Name, Locality, City, Country"
+      return "${place.name}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+    } catch (e) {
+      print(e);
+      return "Address not found"; // Return null if there's an error
+    }
+  }
+
   // Call this method to get the routes and update the UI
   // Call this method to get the routes and print the details in the terminal
   void getRoutes() async {
     try {
+      print(
+          'Fetching routes....................................................................................||||||||||||||||||||||||||||');
+      String from = _controllerFrom.text;
+      String to = _controllerTo.text;
+
+      if (from.isEmpty || to.isEmpty) {
+        print('Please enter both origin and destination.');
+        return; // Exit if either is empty
+      }
+      print('From: $from, To: $to'); // Log the values for debugging
+
+      if (from == 'Your Location') {
+        // Fetch current location and use latitude/longitude as origin
+        Position currentPosition = await getCurrentLocation();
+        // Get the human-readable address
+        from = await getAddressFromLatLng(
+            currentPosition.latitude, currentPosition.longitude);
+        //from = '${currentPosition.latitude},${currentPosition.longitude}';
+        print('Using current location as origin: $from');
+      }
+
       publicTransportRoutes = await fetchPublicTransportRoutes(
-        _controllerFrom.text, // Origin
-        _controllerTo.text, // Destination
+        from, // Origin
+        to, // Destination
         apiKey,
       );
+
+      print('routess !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! $from, $to');
 
       for (int i = 0; i < publicTransportRoutes.length; i++) {
         final route = publicTransportRoutes[i];
@@ -373,7 +646,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
             //next map
             buildMap(),
 
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
 
@@ -390,17 +663,93 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               ),
             ),
 
-            SizedBox(
+            const SizedBox(
               height: 10,
             ),
             //transit
+
+//List of suggested route
             if (_controllerFrom.text.isNotEmpty &&
                 _controllerTo.text.isNotEmpty)
               Expanded(
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
-                  itemCount: publicTransportRoutes.length,
+                  itemCount: publicTransportRoutes.length +
+                      1, // Add 1 for suggestion button
+
                   itemBuilder: (context, index) {
+                    if (index == publicTransportRoutes.length) {
+                      // suggest button
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 30),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 5,
+                                blurRadius: 7,
+                                offset: const Offset(
+                                    0, 3), // Changes position of shadow
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize:
+                                MainAxisSize.min, // Adjusts size to content
+                            children: [
+                              const Text(
+                                'Do you want to suggest alternative route?',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(
+                                  height: 5), // Spacing between text and button
+                              SizedBox(
+                                width: 232, // Full-width button
+                                height: 35, // Set the height
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const RouteCreation()),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(
+                                        0xff1f41bb), // Button background color
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          30), // Rounded corners
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Suggest alternative route to earn points',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Handle route items
                     final route = publicTransportRoutes[index];
                     final legs = route['legs'];
 
@@ -438,15 +787,11 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                           : 'Unknown Time';
                     }
 
-// Remove the trailing " - " from transportNames
+                    // Remove the trailing " - " from transportNames
                     if (transportNames.endsWith(' - ')) {
                       transportNames = transportNames.substring(
                           0, transportNames.length - 3);
                     }
-
-                    print('Route $index:');
-                    print('Transport Names: $transportNames');
-                    print('Total Duration: $totalDuration');
 
                     // Customize this part based on your data structure
                     return suggestRoute(
@@ -459,7 +804,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     );
                   },
                 ),
-              ),
+              )
           ],
         ),
       ),
@@ -562,11 +907,17 @@ class _RouteFinderState2 extends State<RouteFinder2> {
           target: LatLng(lat, lng),
           zoom: 14,
         ),
-        polylines: _polylines,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: true,
+        //polylines: _polylines,
+        //markers: markers,
         onMapCreated: (GoogleMapController controller) {
           mapController = controller;
+          if (markers.isNotEmpty) {
+            mapController
+                ?.animateCamera(CameraUpdate.newLatLng(markers.first.position));
+          }
         },
-        markers: _markers,
       ),
     );
   }
@@ -585,6 +936,10 @@ class _RouteFinderState2 extends State<RouteFinder2> {
           context,
           MaterialPageRoute(
               builder: (context) => routefinder3(
+                  latOrigin: widget.latOrigin,
+                  longOrigin: widget.latOrigin,
+                  latDestination: widget.latDestination,
+                  longDestination: widget.longDestination,
                   legs: legs,
                   steps: steps,
                   origin: _controllerTo.text,
@@ -593,15 +948,15 @@ class _RouteFinderState2 extends State<RouteFinder2> {
       },
       child: Container(
         width: double.infinity, // Make the width match the parent
-        padding: EdgeInsets.all(16.0),
-        margin: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
+        margin: const EdgeInsets.all(8.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2), // Shadow color with opacity
-              offset: Offset(0, 4), // Offset for the shadow
+              offset: const Offset(0, 4), // Offset for the shadow
               blurRadius: 8, // Blur radius for the shadow
               spreadRadius: 2, // Spread radius for the shadow
             ),
@@ -613,7 +968,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               Expanded(
                 flex: 2, // 20% of the width
                 child: Container(
-                  padding: EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: 10),
                   child: pic,
                 ),
               ),
@@ -626,12 +981,12 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                       children: [
                         Text(
                           transpoNames,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                       ],
                     ),
 
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
 
@@ -639,9 +994,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Fare:",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -650,7 +1005,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                         ),
                         Text(
                           fare,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ],
@@ -658,9 +1013,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Time:",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -669,7 +1024,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                         ),
                         Text(
                           time,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ],

@@ -1,9 +1,6 @@
 import 'package:capstone/pages/suggestPinLocation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'routeCreation.dart';
-import 'suggestPinLocation.dart';
 import 'package:capstone/pages/routeFinder.dart';
 import 'package:capstone/pages/travelPlan.dart';
 
@@ -137,7 +134,7 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => RouteFinder(),
+                            builder: (context) => const RouteFinder(),
                           ),
                         );
                       },
@@ -216,7 +213,7 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => travelPlan(),
+                            builder: (context) => const travelPlan(),
                           ),
                         );
                       },
@@ -361,7 +358,7 @@ class _DashboardState extends State<Dashboard> {
   Route _gotoRouteCreation() {
     return PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            RouteCreation(),
+            const RouteCreation(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -381,7 +378,7 @@ class _DashboardState extends State<Dashboard> {
   Route _gotoSuggestPinLocation() {
     return PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            SuggestPinLocation(),
+            const SuggestPinLocation(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;

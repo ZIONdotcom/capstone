@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_webservice/places.dart';
 // Replace with your Google API Key
 
 class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
+
   @override
   _SearchPageState createState() => _SearchPageState();
 }
 
 class _SearchPageState extends State<SearchPage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-        padding: const EdgeInsets.only(top: 40.0, left: 10, right: 10, bottom: 10),
+        padding:
+            const EdgeInsets.only(top: 40.0, left: 10, right: 10, bottom: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -36,23 +37,19 @@ class _SearchPageState extends State<SearchPage> {
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                   hintText: 'Type here...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide.none,
                   ),
                 ),
-              
               ),
             ),
-            
-            
           ],
         ),
       ),
     );
   }
-
-
 }

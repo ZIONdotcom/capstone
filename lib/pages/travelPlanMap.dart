@@ -17,7 +17,7 @@ class _MyWidgetState extends State<Travelplanmap> {
 
   GoogleMapController? _controller;
 
-  CameraPosition _initialCameraPosition = const CameraPosition(
+  final CameraPosition _initialCameraPosition = const CameraPosition(
     target: LatLng(14.831582, 120.903786),
     zoom: 11.5,
   );
@@ -47,7 +47,7 @@ class _MyWidgetState extends State<Travelplanmap> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => travelPlan3()),
+                  MaterialPageRoute(builder: (context) => const travelPlan3()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -100,7 +100,7 @@ class _MyWidgetState extends State<Travelplanmap> {
       }
 
       // Adding polyline on the map
-      polyline.add(Polyline(
+      polyline.add(const Polyline(
         polylineId: PolylineId('line'),
         points: [
           // LatLng(latitude, longitude), //start location
