@@ -1,7 +1,6 @@
 import 'package:capstone/pages/travelPlanMap.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone/pages/travelPlan2.dart';
-import 'package:capstone/pages/travelPlan3.dart';
 
 class travelPlan extends StatefulWidget {
   const travelPlan({super.key});
@@ -176,7 +175,7 @@ class _TravelPlanState extends State<travelPlan> {
                         shrinkWrap: true,
                         //physics: NeverScrollableScrollPhysics(),
                         itemCount: selectedLocations.length,
-                        padding: EdgeInsets.all(0),
+                        padding: const EdgeInsets.all(0),
                         itemBuilder: (context, index) {
                           final location = selectedLocations[index];
                           return ListTile(

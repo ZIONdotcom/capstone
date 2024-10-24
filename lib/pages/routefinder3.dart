@@ -1,4 +1,3 @@
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,13 +12,14 @@ class routefinder3 extends StatefulWidget {
   final String destination;
 
   const routefinder3({
-    Key? key,
+    super.key,
     required this.legs,
     required this.steps,
     required this.origin,
     required this.destination,
-  }) : super(key: key);
+  });
 
+  @override
   ThirdScreenState createState() => ThirdScreenState();
 }
 
@@ -28,9 +28,9 @@ class ThirdScreenState extends State<routefinder3> {
   late List<dynamic> steps;
   late GoogleMapController _mapController;
   final LatLng _startLocation =
-      LatLng(14.831582, 120.903786); //  start location
+      const LatLng(14.831582, 120.903786); //  start location
   final LatLng _destinationLocation =
-      LatLng(34.0522, -118.2437); //  destination location
+      const LatLng(34.0522, -118.2437); //  destination location
 
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
@@ -45,6 +45,7 @@ class ThirdScreenState extends State<routefinder3> {
   SvgPicture ya = SvgPicture.asset('sample');
 
   //search page
+  @override
   void initState() {
     super.initState();
     legs = widget.legs;
@@ -56,6 +57,7 @@ class ThirdScreenState extends State<routefinder3> {
     _toController.text = widget.destination;
   }
 
+  @override
   void dispose() {
     _fromController.dispose();
     _toController.dispose();
@@ -66,7 +68,7 @@ class ThirdScreenState extends State<routefinder3> {
   void _navigateToSearchPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => SearchPage()),
+      MaterialPageRoute(builder: (context) => const SearchPage()),
     );
   }
 
@@ -109,7 +111,7 @@ class ThirdScreenState extends State<routefinder3> {
             Row(
               children: [
                 Container(
-                  margin: EdgeInsets.only(top: 20, right: 5, left: 5),
+                  margin: const EdgeInsets.only(top: 20, right: 5, left: 5),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -166,7 +168,7 @@ class ThirdScreenState extends State<routefinder3> {
             Row(
               children: [
                 Container(
-                  margin: EdgeInsets.only(right: 5, left: 5),
+                  margin: const EdgeInsets.only(right: 5, left: 5),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -217,7 +219,7 @@ class ThirdScreenState extends State<routefinder3> {
                 ),
               ],
             ),
-            SizedBox(
+            const SizedBox(
               height: 10,
             ),
 
@@ -238,7 +240,7 @@ class ThirdScreenState extends State<routefinder3> {
               ),
             ),
 
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
 
@@ -256,9 +258,9 @@ class ThirdScreenState extends State<routefinder3> {
                     ),
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Container(
-                  margin: EdgeInsets.only(left: 30),
+                  margin: const EdgeInsets.only(left: 30),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -275,7 +277,7 @@ class ThirdScreenState extends State<routefinder3> {
             Row(
               children: [
                 Container(
-                  margin: EdgeInsets.only(left: 10, right: 10),
+                  margin: const EdgeInsets.only(left: 10, right: 10),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -285,9 +287,9 @@ class ThirdScreenState extends State<routefinder3> {
                   ),
                   child: SvgPicture.asset('assets/icons/walk2.svg'),
                 ),
-                Spacer(),
+                const Spacer(),
                 Container(
-                  margin: EdgeInsets.only(left: 30),
+                  margin: const EdgeInsets.only(left: 30),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -297,9 +299,9 @@ class ThirdScreenState extends State<routefinder3> {
                   ),
                   child: SvgPicture.asset('assets/icons/bus2.svg'),
                 ),
-                Spacer(),
+                const Spacer(),
                 Container(
-                  margin: EdgeInsets.only(left: 30),
+                  margin: const EdgeInsets.only(left: 30),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -309,9 +311,9 @@ class ThirdScreenState extends State<routefinder3> {
                   ),
                   child: SvgPicture.asset('assets/icons/walk2.svg'),
                 ),
-                Spacer(),
+                const Spacer(),
                 Container(
-                  margin: EdgeInsets.only(left: 30),
+                  margin: const EdgeInsets.only(left: 30),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -321,9 +323,9 @@ class ThirdScreenState extends State<routefinder3> {
                   ),
                   child: SvgPicture.asset('assets/icons/taxi.svg'),
                 ),
-                Spacer(),
+                const Spacer(),
                 Container(
-                  margin: EdgeInsets.only(left: 30),
+                  margin: const EdgeInsets.only(left: 30),
                   alignment: Alignment.center,
                   height: 48.89,
                   width: 48.89,
@@ -342,7 +344,7 @@ class ThirdScreenState extends State<routefinder3> {
               children: [
                 // Line
                 Container(
-                  margin: EdgeInsets.symmetric(horizontal: 20.0),
+                  margin: const EdgeInsets.symmetric(horizontal: 20.0),
                   height: 2.0,
                   width: 900.0, // Adjust width based on number of dots
                   color: Colors.black,
@@ -384,7 +386,7 @@ class ThirdScreenState extends State<routefinder3> {
             //     )
 
             //   ],) ,)
-            SizedBox(
+            const SizedBox(
               height: 10,
             ),
 
@@ -470,22 +472,22 @@ class ThirdScreenState extends State<routefinder3> {
   }
 
   //next marker
-  Set<Marker> _markers = {};
+  final Set<Marker> _markers = {};
 
   void _setMarkers() {
     setState(() {
       _markers.add(
         Marker(
-          markerId: MarkerId('start_marker'),
+          markerId: const MarkerId('start_marker'),
           position: _startLocation,
-          infoWindow: InfoWindow(title: 'Start Location'),
+          infoWindow: const InfoWindow(title: 'Start Location'),
         ),
       );
       _markers.add(
         Marker(
-          markerId: MarkerId('destination_marker'),
+          markerId: const MarkerId('destination_marker'),
           position: _destinationLocation,
-          infoWindow: InfoWindow(title: 'Destination Location'),
+          infoWindow: const InfoWindow(title: 'Destination Location'),
         ),
       );
     });
@@ -496,15 +498,15 @@ class ThirdScreenState extends State<routefinder3> {
   Widget walk(String text, SvgPicture pic) {
     return Container(
       width: double.infinity, // Make the width match the parent
-      padding: EdgeInsets.all(16.0),
-      margin: EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2), // Shadow color with opacity
-            offset: Offset(0, 4), // Offset for the shadow
+            offset: const Offset(0, 4), // Offset for the shadow
             blurRadius: 8, // Blur radius for the shadow
             spreadRadius: 2, // Spread radius for the shadow
           ),
@@ -526,7 +528,7 @@ class ThirdScreenState extends State<routefinder3> {
                 child: Center(
                   child: Text(
                     text,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.black), // Adjust text color for contrast
                   ),
                 ),
@@ -544,15 +546,15 @@ class ThirdScreenState extends State<routefinder3> {
       String geton, String getoff, SvgPicture pic) {
     return Container(
       width: double.infinity, // Make the width match the parent
-      padding: EdgeInsets.all(16.0),
-      margin: EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2), // Shadow color with opacity
-            offset: Offset(0, 4), // Offset for the shadow
+            offset: const Offset(0, 4), // Offset for the shadow
             blurRadius: 8, // Blur radius for the shadow
             spreadRadius: 2, // Spread radius for the shadow
           ),
@@ -576,26 +578,26 @@ class ThirdScreenState extends State<routefinder3> {
                     children: [
                       Text(
                         transpoName,
-                        style: TextStyle(color: Colors.black),
+                        style: const TextStyle(color: Colors.black),
                       ),
-                      Spacer(),
+                      const Spacer(),
                       Text(
                         fare,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color:
                                 Colors.black), // Adjust text color for contrast
                       ),
-                      Spacer(),
+                      const Spacer(),
                       Text(
                         time,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color:
                                 Colors.black), // Adjust text color for contrast
                       ),
                     ],
                   ),
 
-                  SizedBox(
+                  const SizedBox(
                     height: 10,
                   ),
 
@@ -605,9 +607,9 @@ class ThirdScreenState extends State<routefinder3> {
                       Expanded(
                         flex: 4, // 20% of the space
                         child: Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Route",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -619,7 +621,7 @@ class ThirdScreenState extends State<routefinder3> {
                         flex: 6, // 80% of the space
                         child: Text(
                           route,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ),
@@ -632,9 +634,9 @@ class ThirdScreenState extends State<routefinder3> {
                       Expanded(
                         flex: 4, // 20% of the space
                         child: Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Get on",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -646,7 +648,7 @@ class ThirdScreenState extends State<routefinder3> {
                         flex: 6, // 80% of the space
                         child: Text(
                           geton,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ),
@@ -658,9 +660,9 @@ class ThirdScreenState extends State<routefinder3> {
                       Expanded(
                         flex: 4, // 20% of the space
                         child: Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Get off",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -672,7 +674,7 @@ class ThirdScreenState extends State<routefinder3> {
                         flex: 6, // 80% of the space
                         child: Text(
                           getoff,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ),

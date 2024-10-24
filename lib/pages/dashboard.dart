@@ -1,9 +1,13 @@
 import 'package:capstone/pages/suggestPinLocation.dart';
 import 'package:flutter/material.dart';
 import 'routeCreation.dart';
-import 'suggestPinLocation.dart';
 import 'package:capstone/pages/routeFinder.dart';
 import 'package:capstone/pages/travelPlan.dart';
+import 'package:capstone/pages/commutingGuide.dart';
+import 'package:capstone/pages/popularRoutes.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -13,6 +17,22 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
+  Future<List<dynamic>>? _popularRoutes;
+  Future<List<dynamic>> fetchRoutes() async {
+    final response = await http.get(Uri.parse('https://rutaco.online/get_dataPopularRoutes.php'));
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load routes');
+    }
+  }
+
+  @override
+  void initState(){
+    super.initState();
+    _popularRoutes = fetchRoutes();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,7 +155,7 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => RouteFinder(),
+                            builder: (context) => const RouteFinder(),
                           ),
                         );
                       },
@@ -173,6 +193,12 @@ class _DashboardState extends State<Dashboard> {
                           color: Colors.black, size: 25),
                       onPressed: () {
                         // COMMUTING GUIDE
+                         Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CommutingGuide(),
+                          ),
+                        );
                       },
                       label: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +240,7 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => travelPlan(),
+                            builder: (context) => const travelPlan(),
                           ),
                         );
                       },
@@ -259,7 +285,12 @@ class _DashboardState extends State<Dashboard> {
                           color: Colors.black, size: 25),
                       onPressed: () {
                         //ROUTE CREATION
-                        Navigator.of(context).push(_gotoRouteCreation());
+                         Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RouteCreation(),
+                          ),
+                        );
                       },
                       label: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,7 +336,12 @@ class _DashboardState extends State<Dashboard> {
                           color: Colors.black, size: 25),
                       onPressed: () {
                         //PIN SUGGESTION
-                        Navigator.of(context).push(_gotoSuggestPinLocation());
+                         Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SuggestPinLocation(),
+                          ),
+                        );
                       },
                       label: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,6 +383,106 @@ class _DashboardState extends State<Dashboard> {
                     ),
                   ],
                 ),
+
+                 
+              ],
+            ),
+            
+          ),
+          Positioned(
+            left: 10,
+            bottom: 140,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                'Popular Routes',
+                  style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: FutureBuilder(
+                  future: _popularRoutes,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text("Error: ${snapshot.error}"));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text("No routes found"));
+                    } 
+
+                    // Remove the ListView.builder and directly build the widgets using Row.
+                    return Row(
+                      children: [
+                        for (var route in snapshot.data!)
+                          Container(
+                            width: 100,
+                            margin: const EdgeInsets.only(left: 1, right: 4.0, top: 2, bottom: 2),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // Navigator.push(
+                                //   context,
+                                //   MaterialPageRoute(
+                                //     builder: (context) => const PopularRoutes(),
+                                //   ),
+                                // );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.only(right: 3.0, left: 12.0,bottom: 3,top: 3),
+                                backgroundColor: Colors.white,
+                                fixedSize: const Size(100, 40),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: const BorderSide(
+                                    color: Color(0xFFc2d0ff), 
+                                    width: 0.8,
+                                  ),
+                                ),
+                                elevation: 0.5,
+                              ),
+                              child: Text(
+                                "${route['origin_name']} - ${route['destination_name']}",
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        
+                        // Add the FloatingActionButton at the end
+                        SizedBox(
+                          width: 30,
+                          height: 50,
+                          child: FloatingActionButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PopularRoutes(),
+                                ),
+                              );
+                            },
+                            backgroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.arrow_forward, color: Color(0xFF1f41bb)),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
               ],
             ),
           ),
@@ -356,43 +492,43 @@ class _DashboardState extends State<Dashboard> {
   }
 
   //ROUTES TO NEXT PAGE
-  Route _gotoRouteCreation() {
-    return PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            RouteCreation(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.ease;
+  // Route _gotoRouteCreation() {
+  //   return PageRouteBuilder(
+  //       pageBuilder: (context, animation, secondaryAnimation) =>
+  //           const RouteCreation(),
+  //       transitionsBuilder: (context, animation, secondaryAnimation, child) {
+  //         const begin = Offset(1.0, 0.0);
+  //         const end = Offset.zero;
+  //         const curve = Curves.ease;
 
-          var tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          var offsetAnimation = animation.drive(tween);
+  //         var tween =
+  //             Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+  //         var offsetAnimation = animation.drive(tween);
 
-          return SlideTransition(
-            position: offsetAnimation,
-            child: child,
-          );
-        });
-  }
+  //         return SlideTransition(
+  //           position: offsetAnimation,
+  //           child: child,
+  //         );
+  //       });
+  // }
 
-  Route _gotoSuggestPinLocation() {
-    return PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            SuggestPinLocation(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.ease;
+  // Route _gotoSuggestPinLocation() {
+  //   return PageRouteBuilder(
+  //       pageBuilder: (context, animation, secondaryAnimation) =>
+  //           const SuggestPinLocation(),
+  //       transitionsBuilder: (context, animation, secondaryAnimation, child) {
+  //         const begin = Offset(1.0, 0.0);
+  //         const end = Offset.zero;
+  //         const curve = Curves.ease;
 
-          var tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          var offsetAnimation = animation.drive(tween);
+  //         var tween =
+  //             Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+  //         var offsetAnimation = animation.drive(tween);
 
-          return SlideTransition(
-            position: offsetAnimation,
-            child: child,
-          );
-        });
-  }
+  //         return SlideTransition(
+  //           position: offsetAnimation,
+  //           child: child,
+  //         );
+  //       });
+  // }
 }

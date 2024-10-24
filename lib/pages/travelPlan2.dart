@@ -1,5 +1,5 @@
+
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -83,8 +83,8 @@ class _TravelPlan2State extends State<travelPlan2> {
           children: [
             Container(
               alignment: Alignment.topLeft,
-              margin: EdgeInsets.only(top: 20, bottom: 10, left: 20),
-              child: Text(
+              margin: const EdgeInsets.only(top: 20, bottom: 10, left: 20),
+              child: const Text(
                 'Search destination',
                 textAlign: TextAlign.start,
                 style: TextStyle(
@@ -95,7 +95,7 @@ class _TravelPlan2State extends State<travelPlan2> {
               ),
             ),
             Container(
-              margin: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(5),

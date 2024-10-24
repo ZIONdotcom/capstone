@@ -381,7 +381,7 @@ class _RouteFinderState extends State<test> {
             const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.all(0),
+                padding: const EdgeInsets.all(0),
                 itemCount: locationSuggestions.length,
                 itemBuilder: (context, index) {
                   return ListTile(

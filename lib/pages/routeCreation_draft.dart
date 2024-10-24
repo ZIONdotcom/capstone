@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart'; //use to convert coordinates to address
 
-class RouteCreation extends StatefulWidget {
-  const RouteCreation({super.key});
+class RouteCreationDraft extends StatefulWidget {
+  const RouteCreationDraft({super.key});
 
   @override
-  State<RouteCreation> createState() => _MyWidgetState();
+  State<RouteCreationDraft> createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderStateMixin {
+class _MyWidgetState extends State<RouteCreationDraft> with SingleTickerProviderStateMixin {
   List <dynamic> data = [];
-  //List <Widget> pages = [Page1];
+  List <Widget> pages = [const Page1()];
   // StoresheetSizes storesheetSizes = StoresheetSizes();
   GoogleMapController? mapController;
   Marker? originMarker;
@@ -28,6 +28,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   bool textOriginIsNotEmpty = false;
   bool mapClicked = false;
   bool showWalkWidget = false;
+  bool showBackIcon = false,showNextIcon = false;
   int backButtonPressedCount = 0;
 
   int currentpage = 0;
@@ -37,7 +38,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   final Set<Marker> _markers = {};
   final Set<Marker> _originMarker = {};
   int stepNumber = 0;
-  int pageTracker = 0;
+  int currentPageTracker = 0;
   final List<String> existingPagesTracker = [];
   List<double>sheetSizes = [0.35,0.1,0.35]; //one question sheet size
 
@@ -58,46 +59,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
     WidgetsBinding.instance.addPostFrameCallback((_){
       _showDialog(context);
     });
-    // ApiService().fetchData().then((fetchedData){
-    //   setState(() {
-    //     data = fetchedData;
-    //   });
-    // });
-
-    // pages.add(PageOne(onNavigate: _navigateTo));
-    // pages.add(PageTwo(onNavigate: _navigateTo));
-    // pages.add(PageThree(onNavigate: _navigateTo));
-    // pages.add(PageFour());
-    //animation for bottom sheet
-    // _animationController = AnimationController(
-    //   vsync: this,
-    //   duration: Duration(milliseconds: 300),
-    //   );
-    //   _animationController?.forward();
-
-    //to identify if the textOrigin is empty or not
-    // textOriginController.addListener((){
-    //   setState(() {
-    //     textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
-    //   //print(textOriginIsNotEmpty.toString());
-    //   });
-    // });
   }
-  // void getCurrentSheetSize(){
-  //   final RenderBox renderBox = SheetSizeKey.currentContext?.findRenderObject() as RenderBox;
-  //   final size = renderBox?.size;
-  //   setState(() {
-  //     currentSheetSize = size?.height ?? 0.0;
-  //   });
-  // }
-  // void _navigateTo(int pageIndex,double initialSize,double minChildSize, double maxChildSize){
-  //   setState(() {
-  //     currentpage = pageIndex;
-  //     sheetSizes[0] = initialSize;
-  //     sheetSizes[1] = minChildSize;
-  //     sheetSizes[2] = maxChildSize;
-  //   });
-  // }
 
 //GET ADDRESS OF PINNED LOCATION
   Future<String> _getAddress(LatLng position) async {
@@ -150,13 +112,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       ));
       }
       else{
-        // Marker(
-        // markerId: MarkerId(pinnedLocation.toString()),
-        // position: pinnedLocation,
-        // infoWindow: InfoWindow(
-        //   title: "Step $stepNumber",
-        // );
-      
+        
       }
 //temporary polyline and marker
 
@@ -181,84 +137,51 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       );
     }
   }
-  //MODIFYING BOTTOM SHEET SIZE
-  //sheetsize for one quesstion (ex. What is this location called kinemeerut)
-  // void updateSheetSizes(double initialSize, double minChildSize, double maxChildSize) {
-  //   if(mounted){
-       
-  //       setState(() {
-  //         sheetSizes[0] = initialSize;
-  //         sheetSizes[1] = minChildSize;
-  //         sheetSizes[2] = maxChildSize;
 
-        
-  //       print("la");
-  //       print(sheetSizes);
-  //       });
-
-  //   }
-  //   else{
-  //     print('not mounted');
-  //   }
-   
+  void _gotoPreviousPage(){
+    if(currentPageTracker > 1){
+      setState(() {
+        currentPageTracker--;
+        if(currentPageTracker <= 1){
+        showBackIcon = false;
+        }
+      }); 
+    }
+  }
+  void _gotoNextPage(){
+    if(currentPageTracker < pages.length){
+      setState(() {
+        currentPageTracker++;
+        if(currentPageTracker == pages.length){
+        showNextIcon = false;
+        }
+      }); 
+    }
+  }
+  void _newPage(String pagename){
+    if(pagename == ' walk'){
+      pages.add(const WalkWidget());
+    }
+    else if(pagename == ' ride'){
+      pages.add(const RideWidget());
+    }
+    else if(pagename == ' done'){
+      // pages.add(const());
+    }
+    setState(() {
+      currentPageTracker++;
+    });
     
-        
-
-  // }
-
-  // void _fixedSheetSize(){
-  //     // reset to one question size
-  //     updateSheetSizes(0.25, 0.1, 0.25);
-  // }
-  // bool sheetSizeForSecondQuestion(){
-  //   if(textOriginIsNotEmpty == true){
-  //         updateSheetSizes(0.3, 0.1, 0.3);
-
-  //   }
-  //   else{
-  //     _fixedSheetSize();
-  //   }
-  //   return textOriginIsNotEmpty;
-  // }
+  }
 
 
-  // void _goToNextPage() {
-  //   if(backButtonPressedCount == 1){backButtonPressedCount--;}
-  //   pageController.nextPage(
-  //     duration: const Duration(milliseconds: 300),
-  //     curve: Curves.easeInOut,
-  //   );
-  // }
-  // void _goToPreviousPage() {
-  //   pageController.previousPage(
-  //     duration: const Duration(milliseconds: 300),
-  //     curve: Curves.easeInOut,
-  //   );
-  // }
-  
-// void updateSheetSizes(double initialSize, double minChildSize, double maxChildSize) {
-//     setState(() {
-//       sheetSizes[0] = initialSize;
-//       sheetSizes[1] = minChildSize;
-//       sheetSizes[2] = maxChildSize;
-//     });
-//   }
 
-//   void fixSheetSize(bool textNotEmpty){
-//     if(textNotEmpty == true){
-//           sheetSizes[0] = 0.4;
-//           sheetSizes[1] = 0.1;
-//           sheetSizes[2] = 0.4;
-//     }
-//     else{
-//           sheetSizes[0] = 0.25;
-//           sheetSizes[1] = 0.1;
-//           sheetSizes[2] = 0.25;
-//     }
-//   }
-// void getInfoFromWalk(BuildContext context) async {
-//   final description = await Navigator
-// }
+
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -324,277 +247,89 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
                               ),
                             ],
                           ),
-                          child: Navigator(
-                            onGenerateRoute: (RouteSettings settings){
-                              Widget page = Page1(scrollController);
-                              //final args = settings.arguments as Map<int,List>;
-                              //steps = args;
-                              switch(settings.name){
-                                case '/walk':
-                                  page = WalkWidget(scrollController: scrollController,
-                                  onSubmit: (String x){
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  IconButton(
+                                    onPressed: (){
 
-                                  },
-                                  onPop: (){
-                                    WidgetsBinding.instance.addPostFrameCallback((_){
-                                      setState(() {
-                                      sheetSizes[0] = 0.35;
-                                      sheetSizes[1] = 0.1;
-                                      sheetSizes[2] = 0.35;
-                                    });
-                                    });
+                                    }, 
+                                    icon: const Icon(Icons.arrow_back,size: 24)
+                                    ),
+                                    IconButton(
+                                    onPressed: (){
+
+                                    }, 
+                                    icon: const Icon(Icons.arrow_forward,size: 24)
+                                    )
+                                ],
+                              ),
+                              pages[currentPageTracker],
+                            ],
+                          )
+                          // child: Navigator(
+                          //   onGenerateRoute: (RouteSettings settings){
+                          //     Widget page = Page1(scrollController);
+                          //     //final args = settings.arguments as Map<int,List>;
+                          //     //steps = args;
+                          //     switch(settings.name){
+                          //       case '/walk':
+                          //         page = WalkWidget(scrollController: scrollController,
+                          //         onSubmit: (String x){
+
+                          //         },
+                          //         onPop: (){
+                          //           WidgetsBinding.instance.addPostFrameCallback((_){
+                          //             setState(() {
+                          //             sheetSizes[0] = 0.35;
+                          //             sheetSizes[1] = 0.1;
+                          //             sheetSizes[2] = 0.35;
+                          //           });
+                          //           });
                                     
-                                  });
-                                  WidgetsBinding.instance.addPostFrameCallback((_){
-                                      setState(() {
-                                        sheetSizes[0] = 0.40;
-                                        sheetSizes[1] = 0.1;
-                                        sheetSizes[2] = 0.40;
-                                      });
-                                    });
+                          //         });
+                          //         WidgetsBinding.instance.addPostFrameCallback((_){
+                          //             setState(() {
+                          //               sheetSizes[0] = 0.40;
+                          //               sheetSizes[1] = 0.1;
+                          //               sheetSizes[2] = 0.40;
+                          //             });
+                          //           });
                                   
-                                  break;
-                                  case '/ride':
-                                    page = RideWidget(scrollController: scrollController);
-                                    WidgetsBinding.instance.addPostFrameCallback((_){
-                                          setState(() {
-                                            sheetSizes[0] = 0.70;
-                                            sheetSizes[1] = 0.1;
-                                            sheetSizes[2] = 0.70;
-                                          });
-                                        });
-                                    break;
+                          //         break;
+                          //         case '/ride':
+                          //           page = RideWidget(scrollController: scrollController);
+                          //           WidgetsBinding.instance.addPostFrameCallback((_){
+                          //                 setState(() {
+                          //                   sheetSizes[0] = 0.70;
+                          //                   sheetSizes[1] = 0.1;
+                          //                   sheetSizes[2] = 0.70;
+                          //                 });
+                          //               });
+                          //           break;
 
 
-                              }
-                              return PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  page,
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0); // Wipe in from right
-                                const end = Offset.zero;
-                                const curve = Curves.ease;
+                          //     }
+                          //     return PageRouteBuilder(
+                          //     pageBuilder: (context, animation, secondaryAnimation) =>
+                          //         page,
+                          //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          //       const begin = Offset(1.0, 0.0); // Wipe in from right
+                          //       const end = Offset.zero;
+                          //       const curve = Curves.ease;
                         
-                                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                                var offsetAnimation = animation.drive(tween);
+                          //       var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                          //       var offsetAnimation = animation.drive(tween);
                         
-                                return SlideTransition(
-                                  position: offsetAnimation,
-                                  child: child,
-                                );
-                              },
-                            );
-                            },
-                          ),
-                          // child: PageView(
-                          //   controller: pageController, // Use the page controller
-                          // physics: const NeverScrollableScrollPhysics(),
-                          //   children: [
-                              
-                          //     Column(
-                          //       //fist page
-                          //       children: [
-                          //         Container(
-                          //           margin: const EdgeInsets.only(top: 10),
-                          //           child: Container(
-                          //             width: 60,
-                          //             height: 6,
-                          //             decoration: BoxDecoration(
-                          //               color: Colors.grey,
-                          //               borderRadius: BorderRadius.circular(3),
-                          //             ),
-                          //           ),
-                          //         ),
-                          //         Expanded(
-                                    
-                          //           child: SingleChildScrollView(
-                          //             controller: scrollController,
-                          //             child: Padding(
-                          //               padding: const EdgeInsets.all(5.0),
-                          //               child: Column(
-                          //                 crossAxisAlignment: CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   Container(
-                          //                     alignment: Alignment.center,
-                          //                     padding: const EdgeInsets.symmetric(vertical: 20.0),
-                          //                     child: const Text(
-                          //                       'What is this location called?',
-                          //                       style: TextStyle(
-                          //                         fontSize: 16,
-                          //                         fontWeight: FontWeight.bold,
-                          //                       ),
-                          //                       textAlign: TextAlign.center,
-                          //                     ),
-                          //                   ),
-                          //                   const SizedBox(height: 3),
-                          //                   Container(
-                          //                     margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-                          //                     height: 37,
-                          //                     decoration: BoxDecoration(
-                          //                       color: Colors.white,
-                          //                       borderRadius: BorderRadius.circular(5),
-                          //                       boxShadow: [
-                          //                         BoxShadow(
-                          //                           color: const Color(0xff1D1617).withOpacity(0.11),
-                          //                           blurRadius: 4,
-                          //                         ),
-                          //                       ],
-                          //                     ),
-                          //                     child: GestureDetector(
-                          //                       onTap: (){
-                          //                         //i dont know pa dito, gusto ko kase na pag clinick is magincrease yung size ng sheet, pagisipan ko pa pano maging smooth haha
-                          //                       },
-                          //                       child: TextFormField(
-                          //                         controller: textOriginController,
-                          //                         decoration: InputDecoration(
-                          //                           filled: true,
-                          //                           fillColor: Colors.white,
-                          //                           contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                          //                           hintText: 'Type here...',
-                          //                           border: OutlineInputBorder(
-                          //                             borderRadius: BorderRadius.circular(5),
-                          //                             borderSide: BorderSide.none,
-                          //                           ),
-                          //                         ),
-                          //                       ),
-                          //                     ),
-                          //                   ),
-                          //                   const SizedBox(height: 10),
-                          //                   if(_sheetSizeForSecondQuestion())
-                          //                   Column(
-                          //                     children: [
-                          //                       Container(
-                          //                       padding: const EdgeInsets.only(left: 20.0),
-                          //                       alignment: Alignment.centerLeft,
-                          //                       child: const Text(
-                          //                         'What is the first step?',
-                          //                         style: TextStyle(
-                          //                           color: Colors.black,
-                          //                           fontSize: 12,
-                          //                           fontWeight: FontWeight.w600,
-                          //                         ),
-                          //                       ),
-                          //                       ),
-                          //                       Row(
-                          //                         children: [
-                          //                           Container(
-                          //                           margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                          //                           child: ElevatedButton(
-                          //                             onPressed: (){
-                          //                                 pinnedLocations.add(currentPinnedLocation);
-                          //                                 print('added ${currentPinnedLocation}');
-                          //                                 _fixedSheetSize();
-                          //                                 pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeIn);
-                        
-                          //                                 //showWalkWidget = true;
-                          //                             },
-                          //                             style: ElevatedButton.styleFrom(
-                          //                               foregroundColor: Colors.white,
-                          //                               backgroundColor: const Color(0xff1F41BB),
-                          //                               minimumSize: const Size(131, 26), 
-                          //                             ),
-                          //                              child: const Text('Walk'),
-                          //                           ),
-                          //                           ),
-                          //                           Container(
-                          //                           margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                          //                           child: ElevatedButton(
-                          //                             onPressed: (){
-                          //                                 pinnedLocations.add(currentPinnedLocation);
-                          //                                 print('added ${currentPinnedLocation}');
-                          //                                 pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeIn);
-                          //                             },
-                          //                             style: ElevatedButton.styleFrom(
-                          //                               foregroundColor: Colors.white,
-                          //                               backgroundColor: const Color(0xff1F41BB),
-                          //                               minimumSize: const Size(131, 26), 
-                          //                             ),
-                          //                             child: const Text('Ride'),
-                          //                           ),
-                          //                         ),
-                        
-                          //                         ],
-                          //                       ),
-                                              
-                          //                     ],
-                          //                   ),
-                          //                 ],                              
-                          //               ),
-                          //             ),
-                          //           ),
-                          //         ),
-                          //       ],
-                          //     ),
-                          //     Column(
-                          //       children: [
-                          //         Container(
-                          //           margin: const EdgeInsets.only(top: 10),
-                          //           child: Container(
-                          //             width: 60,
-                          //             height: 6,
-                          //             decoration: BoxDecoration(
-                          //               color: Colors.grey,
-                          //               borderRadius: BorderRadius.circular(3),
-                          //             ),
-                          //           ),
-                          //         ),
-                          //         const SizedBox(height: 6),
-                          //         Expanded(
-                          //           child: SingleChildScrollView(
-                          //             child: Padding(
-                          //               padding: const EdgeInsets.all(5.0),
-                          //               child: Column(
-                          //                 crossAxisAlignment: CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   Padding(
-                          //                     padding: const EdgeInsets.all(8.0),
-                          //                     child: Row(
-                          //                       children: [
-                          //                         IconButton(
-                          //                           icon: const Icon(Icons.arrow_back, size: 24),
-                          //                           onPressed: () {
-                          //                               backButtonPressedCount++;
-                          //                               _goToPreviousPage();
-                          //                             },
-                          //                           ),
-                          //                         const Expanded(
-                          //                           child: Center(
-                          //                             child: Text(
-                          //                               'Pin location',
-                          //                               style: TextStyle(fontSize: 14), 
-                          //                             ),
-                          //                           ),
-                          //                         ),
-                          //                         if(backButtonPressedCount > 0)
-                          //                         IconButton(
-                          //                           icon: const Icon(Icons.arrow_forward, size: 24),
-                          //                           onPressed: () {
-                          //                             backButtonPressedCount--;
-                          //                             },
-                          //                           ),
-                          //                       ],
-                          //                     ),
-                          //                   )
-                          //                   ,
-                          //                   Container(
-                          //                     alignment: Alignment.center,
-                          //                     padding: const EdgeInsets.symmetric(vertical: 20.0),
-                          //                     child: const Text(
-                          //                       'Where can we stop?',
-                          //                       style: TextStyle(
-                          //                         fontSize: 16,
-                          //                         fontWeight: FontWeight.bold,
-                          //                       ),
-                          //                     ),
-                          //                   )
-                          //                 ],
-                          //               ),
-                          //             ),
-                          //           ),
-                          //         )
-                          //       ],
-                          //     ),
-                          //   ],
+                          //       return SlideTransition(
+                          //         position: offsetAnimation,
+                          //         child: child,
+                          //       );
+                          //     },
+                          //   );
+                          //   },
                           // ),
                         ),
                       );
@@ -658,42 +393,26 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         );
       },
     );
-    // TransitionBuilder:  (context, animation, secondaryAnimation, child){
-    //   return FadeTransition(
-    //     opacity: animation,
-    //     child: child,
-    //   );
-    // },
-    // transitionDuration
 }
-// Route _gotoDashboard(){
-//       return PageRouteBuilder(
-//         pageBuilder: (context, animation, secondaryAnimation) => Dashboard(),
-//         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-//           const begin = Offset(1.0, 0.0);
-//           const end = Offset.zero;
-//           const curve = Curves.ease;
 
-//           var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-//           var offsetAnimation = animation.drive(tween);
-
-//           return SlideTransition(
-//             position: offsetAnimation,
-//             child: child,
-//           );
-
-//         }
-//       );
-//     }
 }
+
+
+
+
+
+
+
+
 class Page1 extends StatefulWidget {
-  final ScrollController _scrollController;
-  const Page1(this._scrollController, {super.key});
+  // final ScrollController _scrollController;
+  const Page1({super.key});
 
   @override
   State<Page1> createState() => _Page1State();
 }
 class _Page1State extends State<Page1>{
+  final ScrollController _scrollController = ScrollController();
   final _MyWidgetState mainwidget = _MyWidgetState();
   // StoresheetSizes storesheetSizes = StoresheetSizes();
   TextEditingController textOriginController = TextEditingController();
@@ -719,7 +438,7 @@ class _Page1State extends State<Page1>{
   Widget build(BuildContext context){
     return Scaffold(
       body: SingleChildScrollView(
-        controller: widget._scrollController,
+        controller: _scrollController,
               child: Padding(
                 padding: const EdgeInsets.all(5.0),
                 child: Column(
@@ -799,9 +518,11 @@ class _Page1State extends State<Page1>{
                               margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
                               child: ElevatedButton(
                               onPressed: (){
-                                mainwidget.pageTracker++;
-                                mainwidget.existingPagesTracker.add('/walk');
-                                Navigator.of(context).pushNamed('/walk');
+                                mainwidget._newPage('walk');
+                                mainwidget.showBackIcon = true;
+                                // mainwidget.currentPageTracker++;
+                                // mainwidget.existingPagesTracker.add('/walk');
+                                // Navigator.of(context).pushNamed('/walk');
                               },
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
@@ -815,9 +536,11 @@ class _Page1State extends State<Page1>{
                               margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
                               child: ElevatedButton(
                               onPressed: (){
-                                mainwidget.pageTracker++;
-                                mainwidget.existingPagesTracker.add('/ride');
-                                Navigator.of(context).pushNamed('/ride');
+                                mainwidget._newPage('ride');
+                                mainwidget.showBackIcon = true;
+                                // mainwidget.pageTracker++;
+                                // mainwidget.existingPagesTracker.add('/ride');
+                                // Navigator.of(context).pushNamed('/ride');
                             
                               },
                               style: ElevatedButton.styleFrom(
@@ -841,23 +564,38 @@ class _Page1State extends State<Page1>{
           );
 }}
   
-class WalkWidget extends StatefulWidget {
-  final ScrollController scrollController;
-  final VoidCallback onPop;
-  final Function(String) onSubmit;
 
-  const WalkWidget({
-    super.key,
-    required this.scrollController,
-    required this.onPop,
-    required this.onSubmit,
-  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class WalkWidget extends StatefulWidget {
+  // final ScrollController scrollController;
+  // final VoidCallback onPop;
+  // final Function(String) onSubmit;
+
+  const WalkWidget({super.key});
 
   @override
   _WalkWidgetState createState() => _WalkWidgetState();
 }
 
 class _WalkWidgetState extends State<WalkWidget> {
+  final ScrollController scrollController = ScrollController();
   final _MyWidgetState mainwidget = _MyWidgetState();
   TextEditingController descriptionController = TextEditingController();
   bool descriptionTextIsNotEmpty = false;
@@ -885,7 +623,7 @@ class _WalkWidgetState extends State<WalkWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        controller: widget.scrollController, // Accessing widget properties
+        controller:scrollController, // Accessing widget properties
         child: Padding(
           padding: const EdgeInsets.all(5.0),
           child: Column(
@@ -910,11 +648,11 @@ class _WalkWidgetState extends State<WalkWidget> {
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: () {
-                      mainwidget.addWalk(descriptionController.text);
-                      mainwidget.pageTracker--;
-                      widget.onPop();
-                      widget.onSubmit(descriptionController.text);
-                      Navigator.pop(context);
+                      // mainwidget.addWalk(descriptionController.text);
+                      // mainwidget.pageTracker--;
+                      // // widget.onPop();
+                      // // widget.onSubmit(descriptionController.text);
+                      // Navigator.pop(context);
                     },
                   ),
                   const Text(
@@ -923,13 +661,13 @@ class _WalkWidgetState extends State<WalkWidget> {
                       fontSize: 14,
                     ),
                   ),
-                  if(mainwidget.pageTracker != mainwidget.existingPagesTracker.length)
+                  if(mainwidget.currentPageTracker != mainwidget.existingPagesTracker.length)
                   IconButton(
                       icon: const Icon(Icons.arrow_forward),
                       onPressed: () {
-                        widget.onPop();
-                        widget.onSubmit(descriptionController.text);
-                        Navigator.pop(context);
+                        // widget.onPop();
+                        // widget.onSubmit(descriptionController.text);
+                        // Navigator.pop(context);
                       },
                     ),
                 ],
@@ -1057,15 +795,32 @@ class _WalkWidgetState extends State<WalkWidget> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RideWidget extends StatefulWidget {
-  final ScrollController scrollController;
-  const RideWidget({super.key, required this.scrollController});
+  // final 
+  const RideWidget({super.key});
 
   @override
   State<RideWidget> createState() => _RideWidgetState();
 }
 
 class _RideWidgetState extends State<RideWidget> {
+  ScrollController scrollController = ScrollController();
   TextEditingController descriptionController = TextEditingController();
   bool descriptionTextIsNotEmpty = false;
   List <String> vehicles = ['tricycle','jeep','e-jeep','bus'];
@@ -1114,7 +869,7 @@ class _RideWidgetState extends State<RideWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        controller: widget.scrollController,
+        controller: scrollController,
         child: Padding(
           padding: const EdgeInsets.all(5.0),
           child: Column(
@@ -1164,46 +919,6 @@ class _RideWidgetState extends State<RideWidget> {
                 ),
               ),
               const SizedBox(height: 12),
-              // const Padding(
-              //   padding: EdgeInsets.only(left: 15.0),
-              //   child:  Text('Description:',
-              //   style: TextStyle(
-              //     color: Colors.black,
-              //     fontSize: 12,
-              //     fontWeight: FontWeight.w600,
-              //   ),),
-              // ),
-              // const SizedBox(height: 10),
-              // Padding(
-              //   padding: const EdgeInsets.only(left: 10.0, right: 10.0),
-              //   child: TextFormField(
-              //     controller: descriptionController,
-              //     maxLength: 100,
-              //     maxLines: 2,
-              //     minLines: 1,
-              //     decoration: InputDecoration(
-              //       filled: true,
-              //       fillColor: Colors.white,
-              //       contentPadding:
-              //           const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              //       hintText: 'Type here...',
-              //       border: OutlineInputBorder(
-              //         borderRadius: BorderRadius.circular(5),
-              //         borderSide: const BorderSide(
-              //           color: Color.fromARGB(255, 255, 255, 255),
-              //           width: 1.5,
-              //         ),
-              //       ),
-              //       focusedBorder: OutlineInputBorder(
-              //         borderRadius: BorderRadius.circular(5),
-              //         borderSide: const BorderSide(
-              //           color: Color.fromARGB(255, 76, 174, 255),
-              //           width: 2,
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-              // ),
               const Padding(
                 padding: EdgeInsets.only(left: 15.0),
                 child:  Text('Mode of Transportation:',
@@ -1386,5 +1101,13 @@ class _RideWidgetState extends State<RideWidget> {
       ),
     );
   }
+}
+
+
+
+
+
+class DataManager{
+  
 }
 

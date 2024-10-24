@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_webservice/places.dart';
 // Replace with your Google API Key
 
 class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
+
   @override
   _SearchPageState createState() => _SearchPageState();
 }

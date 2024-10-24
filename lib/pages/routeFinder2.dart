@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'routeFinder.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/pages/routefinder3.dart';
 
@@ -15,14 +13,14 @@ class RouteFinder2 extends StatefulWidget {
   final String destinationName;
 
   const RouteFinder2({
-    Key? key,
+    super.key,
     required this.latOrigin,
     required this.longOrigin,
     required this.latDestination,
     required this.longDestination,
     required this.destinationName,
     required this.originName,
-  }) : super(key: key);
+  });
 
   // const RouteFinder2({super.key});
 
@@ -41,7 +39,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   void _navigateToSearchPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RouteFinder()),
+      MaterialPageRoute(builder: (context) => const RouteFinder()),
     );
   }
 
@@ -53,10 +51,10 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   //end swap ----------------------------------------------------------
 
   //marker
-  Set<Marker> _markers = {};
+  final Set<Marker> _markers = {};
 
   //map
-  CameraPosition _initialCameraPosition = const CameraPosition(
+  final CameraPosition _initialCameraPosition = const CameraPosition(
     target: LatLng(14.831582, 120.903786), // Default initial position
     zoom: 11.5, // Default zoom level
   );
@@ -69,8 +67,8 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   void initState() {
     super.initState();
     fetchRoute();
-    _controllerTo.text = '${widget.originName}';
-    _controllerFrom.text = '${widget.destinationName}';
+    _controllerTo.text = widget.originName;
+    _controllerFrom.text = widget.destinationName;
     _setCustomMarkerIcon();
     getRoutes();
   }
@@ -79,7 +77,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   BitmapDescriptor? customIcon;
   void _setCustomMarkerIcon() async {
     customIcon = await BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(
+        const ImageConfiguration(
             size: Size(15, 15)), // You can adjust the size if needed
         'assets/icons/dot.png');
   }
@@ -112,7 +110,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
             setState(() {
               _polylines.add(
                 Polyline(
-                  polylineId: PolylineId('route'),
+                  polylineId: const PolylineId('route'),
                   points: polylineCoordinates,
                   color: Colors.blue,
                   width: 5,
@@ -129,19 +127,19 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               setState(() {
                 _markers.add(
                   Marker(
-                    markerId: MarkerId('start_marker'),
+                    markerId: const MarkerId('start_marker'),
                     position: startLocation,
                     icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                    infoWindow: InfoWindow(title: 'Start Location'),
+                    infoWindow: const InfoWindow(title: 'Start Location'),
                   ),
                 );
 
                 _markers.add(
                   Marker(
-                    markerId: MarkerId('end_marker'),
+                    markerId: const MarkerId('end_marker'),
                     position: endLocation,
                     icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                    infoWindow: InfoWindow(title: 'End Location'),
+                    infoWindow: const InfoWindow(title: 'End Location'),
                   ),
                 );
               });
@@ -373,7 +371,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
             //next map
             buildMap(),
 
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
 
@@ -390,7 +388,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               ),
             ),
 
-            SizedBox(
+            const SizedBox(
               height: 10,
             ),
             //transit
@@ -593,15 +591,15 @@ class _RouteFinderState2 extends State<RouteFinder2> {
       },
       child: Container(
         width: double.infinity, // Make the width match the parent
-        padding: EdgeInsets.all(16.0),
-        margin: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
+        margin: const EdgeInsets.all(8.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2), // Shadow color with opacity
-              offset: Offset(0, 4), // Offset for the shadow
+              offset: const Offset(0, 4), // Offset for the shadow
               blurRadius: 8, // Blur radius for the shadow
               spreadRadius: 2, // Spread radius for the shadow
             ),
@@ -613,7 +611,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
               Expanded(
                 flex: 2, // 20% of the width
                 child: Container(
-                  padding: EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: 10),
                   child: pic,
                 ),
               ),
@@ -626,12 +624,12 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                       children: [
                         Text(
                           transpoNames,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                       ],
                     ),
 
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
 
@@ -639,9 +637,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Fare:",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -650,7 +648,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                         ),
                         Text(
                           fare,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ],
@@ -658,9 +656,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(
+                          padding: const EdgeInsets.only(
                               right: 8.0), // Space between the two texts
-                          child: Text(
+                          child: const Text(
                             "Time:",
                             style: TextStyle(color: Colors.black),
                             textAlign:
@@ -669,7 +667,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                         ),
                         Text(
                           time,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                           textAlign: TextAlign.start, // Align text to the start
                         ),
                       ],
