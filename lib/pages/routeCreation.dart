@@ -1,6 +1,6 @@
 import 'dart:core';
-import 'package:capstone/pages/dashboard.dart';
 import 'package:flutter/material.dart';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart'; //use to convert coordinates to address
 
@@ -11,8 +11,9 @@ class RouteCreation extends StatefulWidget {
   State<RouteCreation> createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<RouteCreation>
-    with SingleTickerProviderStateMixin {
+class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderStateMixin {
+  List <dynamic> data = [];
+  //List <Widget> pages = [Page1];
   // StoresheetSizes storesheetSizes = StoresheetSizes();
   GoogleMapController? mapController;
   Marker? originMarker;
@@ -30,16 +31,26 @@ class _MyWidgetState extends State<RouteCreation>
   int backButtonPressedCount = 0;
 
   int currentpage = 0;
-  final List<Widget> pages = [];
+  final Map<int, List<dynamic>> stepsCpntainer = {};
   List<LatLng> pinnedLocations = [];
   final Set<Polyline> _polylines = {};
   final Set<Marker> _markers = {};
   final Set<Marker> _originMarker = {};
   int stepNumber = 0;
+  int pageTracker = 0;
+  final List<String> existingPagesTracker = [];
+  List<double>sheetSizes = [0.35,0.1,0.35]; //one question sheet size
 
-  List<double> sheetSizes = [0.35, 0.1, 0.35]; //one question sheet size
+  void addWalk(description){
+    stepsCpntainer[stepNumber] = [{description}];
+  }
+  void addRide(LatLng origin,LatLng destination,String modeofTranspo,String description){
+    stepsCpntainer[stepNumber] = [{origin,destination,modeofTranspo,description}];
+  }
 
-  Map<int, List> steps = {};
+
+
+ // Map <int, List> steps = {};
 
   @override
   void initState() {
@@ -47,6 +58,12 @@ class _MyWidgetState extends State<RouteCreation>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showDialog(context);
     });
+    // ApiService().fetchData().then((fetchedData){
+    //   setState(() {
+    //     data = fetchedData;
+    //   });
+    // });
+
     // pages.add(PageOne(onNavigate: _navigateTo));
     // pages.add(PageTwo(onNavigate: _navigateTo));
     // pages.add(PageThree(onNavigate: _navigateTo));
@@ -627,6 +644,7 @@ class _MyWidgetState extends State<RouteCreation>
             TextButton(
               child: const Text("OK"),
               onPressed: () {
+                // print(data[1]['username']); 
                 Navigator.of(context).pop(); // Close the dialog
               },
             ),
@@ -681,9 +699,9 @@ class _Page1State extends State<Page1> {
   @override
   void initState() {
     super.initState();
-    // to identify if the textOrigin is empty or not
-    textOriginController.addListener(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    //to identify if the textOrigin is empty or not
+    textOriginController.addListener((){
+      WidgetsBinding.instance.addPostFrameCallback((_){
         setState(() {
           textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
           //print(textOriginIsNotEmpty.toString());
@@ -691,161 +709,151 @@ class _Page1State extends State<Page1> {
       });
     });
   }
-  // bool passSizes(){
-  //   // mainwidget.fixSheetSize(textOriginIsNotEmpty);
-  //   return textOriginIsNotEmpty;
-  // }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
         controller: widget._scrollController,
-        child: Padding(
-          padding: const EdgeInsets.all(5.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                alignment: Alignment.center,
-                margin: const EdgeInsets.only(top: 10),
-                child: Container(
-                  width: 60,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.grey,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(vertical: 20.0),
-                child: const Text(
-                  'What is this location called?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Container(
-                margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-                height: 37,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xff1D1617).withOpacity(0.11),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: TextFormField(
-                  controller: textOriginController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 15),
-                    hintText: 'Type here...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(5),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (textOriginIsNotEmpty)
-                Column(
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is the first step?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.only(top: 10),
+                      child: Container(
+                        width: 60,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
                     ),
-                    Row(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(
-                              left: 20, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/walk');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
+                    Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 20.0),
+                      child: const Text(
+                        'What is this location called?',
+                        style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      margin: const EdgeInsets.only(right: 20.0, left: 20.0),
+                      height: 37,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: [
+                        BoxShadow(
+                        color: const Color(0xff1D1617).withOpacity(0.11),
+                        blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: textOriginController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                            hintText: 'Type here...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: BorderSide.none,
                             ),
-                            child: const Text('Walk'),
                           ),
                         ),
+                    ),
+                    const SizedBox(height: 10),
+                    if(textOriginIsNotEmpty)
+                    Column(
+                      children: [
                         Container(
-                          margin: const EdgeInsets.only(
-                              left: 20, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/ride');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(131, 26),
+                          padding: const EdgeInsets.only(left: 20.0),
+                          alignment: Alignment.centerLeft,
+                          child: const Text(
+                            'What is the first step?',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
-                            child: const Text('Ride'),
                           ),
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
+                              child: ElevatedButton(
+                              onPressed: (){
+                                mainwidget.pageTracker++;
+                                mainwidget.existingPagesTracker.add('/walk');
+                                Navigator.of(context).pushNamed('/walk');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: const Color(0xff1F41BB),
+                                minimumSize: const Size(131, 26), 
+                                ),
+                              child: const Text('Walk'),
+                              ),
+                            ),
+                            Container(
+                              margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
+                              child: ElevatedButton(
+                              onPressed: (){
+                                mainwidget.pageTracker++;
+                                mainwidget.existingPagesTracker.add('/ride');
+                                Navigator.of(context).pushNamed('/ride');
+                            
+                              },
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: const Color(0xff1F41BB),
+                                minimumSize: const Size(131, 26), 
+                                ),
+                              child: const Text('Ride'),
+                              ),
+                            )
+                          ],
                         )
+                          
                       ],
                     )
+
                   ],
-                )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// class StoresheetSizes {
-//   _MyWidgetState mainclass = _MyWidgetState();
-//   List <double> sheetSizes = [0.25,1,0.25];
-
-//   void setSizes(double initialSize,double minChildSize,double maxChildSize){
-//     // mainclass.updateSheetSizes(initialSize, minChildSize, maxChildSize);
-
-//   }
-
-// }
+                ),
+              ),
+            ),
+          );
+}}
+  
 class WalkWidget extends StatefulWidget {
   final ScrollController scrollController;
   final VoidCallback onPop;
   final Function(String) onSubmit;
 
   const WalkWidget({
-    Key? key,
+    super.key,
     required this.scrollController,
     required this.onPop,
     required this.onSubmit,
-  }) : super(key: key);
+  });
 
   @override
   _WalkWidgetState createState() => _WalkWidgetState();
 }
 
 class _WalkWidgetState extends State<WalkWidget> {
+  final _MyWidgetState mainwidget = _MyWidgetState();
   TextEditingController descriptionController = TextEditingController();
   bool descriptionTextIsNotEmpty = false;
 
@@ -893,9 +901,12 @@ class _WalkWidgetState extends State<WalkWidget> {
               const SizedBox(height: 10),
               Row(
                 children: [
+                  
                   IconButton(
-                    icon: Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back),
                     onPressed: () {
+                      mainwidget.addWalk(descriptionController.text);
+                      mainwidget.pageTracker--;
                       widget.onPop();
                       widget.onSubmit(descriptionController.text);
                       Navigator.pop(context);
@@ -907,6 +918,15 @@ class _WalkWidgetState extends State<WalkWidget> {
                       fontSize: 14,
                     ),
                   ),
+                  if(mainwidget.pageTracker != mainwidget.existingPagesTracker.length)
+                  IconButton(
+                      icon: const Icon(Icons.arrow_forward),
+                      onPressed: () {
+                        widget.onPop();
+                        widget.onSubmit(descriptionController.text);
+                        Navigator.pop(context);
+                      },
+                    ),
                 ],
               ),
               Container(
@@ -1040,8 +1060,7 @@ class _WalkWidgetState extends State<WalkWidget> {
 
 class RideWidget extends StatefulWidget {
   final ScrollController scrollController;
-  const RideWidget({Key? key, required this.scrollController})
-      : super(key: key);
+  const RideWidget({super.key, required this.scrollController});
 
   @override
   State<RideWidget> createState() => _RideWidgetState();
@@ -1071,6 +1090,7 @@ class _RideWidgetState extends State<RideWidget> {
   List<bool> checkboxBusTracker = [];
   List<bool> checkboxJeepRoutesTracker = [];
   List<bool> checkboxBusRoutesTracker = [];
+  
   //int listNumber = 0;
 
   String? selectedValue;
@@ -1134,7 +1154,7 @@ class _RideWidgetState extends State<RideWidget> {
               Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back),
                     onPressed: () {
                       //widget.onPop();
                       //widget.onSubmit(descriptionController.text);
@@ -1218,12 +1238,12 @@ class _RideWidgetState extends State<RideWidget> {
                 alignment: Alignment.centerLeft,
                 child: DropdownButtonFormField<String>(
                   value: selectedValue,
-                  hint: Text('Select mode', style: TextStyle(fontSize: 13)),
+                  hint: const Text('Select mode',style: TextStyle(fontSize: 13)),
                   // isExpanded: true,
                   items: vehicles.map((String item) {
                     return DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(item, style: TextStyle(fontSize: 13)));
+                      value: item,
+                      child: Text(item,style: const TextStyle(fontSize: 13)));
                   }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
@@ -1237,152 +1257,149 @@ class _RideWidgetState extends State<RideWidget> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (selectedValue == 'bus')
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(left: 16.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'Bus Name: ',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+              if(selectedValue == 'bus')
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'Bus Name: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 0.0,
-                      children: List.generate(busCorporations.length, (index) {
-                        return SizedBox(
-                          width: MediaQuery.of(context).size.width / 2 - 16,
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: checkboxBusTracker[index],
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    checkboxBusTracker[index] = value ?? false;
-                                  });
-                                },
-                              ),
-                              Text(
-                                busCorporations[index],
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
+                  ),
+                  Wrap(
+                  spacing: 8.0, 
+                  runSpacing: 0.0, 
+                  children: List.generate(busCorporations.length, (index) {
+                    return SizedBox(
+                      width: MediaQuery.of(context).size.width / 2 - 16,
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: checkboxBusTracker[index],
+                            onChanged: (bool? value) {
+                              setState(() {
+                                checkboxBusTracker[index] = value ?? false; 
+                              });
+                            },
                           ),
-                        );
-                      }),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.only(left: 16.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'Bus Route: ',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                          Text(
+                            busCorporations[index],
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
                       ),
-                    ),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 0.0,
-                      children: List.generate(busRoutes.length, (index) {
-                        return SizedBox(
-                          width: MediaQuery.of(context).size.width / 2 - 16,
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: checkboxBusRoutesTracker[index],
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    checkboxBusRoutesTracker[index] =
-                                        value ?? false;
-                                  });
-                                },
-                              ),
-                              Text(
-                                busRoutes[index],
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    )
-                  ],
+                    );
+                  }),
                 ),
-              if (descriptionTextIsNotEmpty)
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(left: 16.0),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'What is the next step?',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                Container(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'Bus Route: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Row(
+                  ),
+                Wrap(
+                spacing: 8.0, 
+                runSpacing: 0.0, 
+                children: List.generate(busRoutes.length, (index) {
+                  return SizedBox(
+                    width: MediaQuery.of(context).size.width / 2 - 16, 
+                    child: Row(
                       children: [
-                        Container(
-                          margin: const EdgeInsets.only(
-                              left: 15, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/walk');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(100, 26),
-                            ),
-                            child: const Text('Walk'),
-                          ),
+                        Checkbox(
+                          value: checkboxBusRoutesTracker[index],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              checkboxBusRoutesTracker[index] = value ?? false; 
+                            });
+                          },
                         ),
-                        Container(
-                          margin: const EdgeInsets.only(
-                              left: 5, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              //showWalkWidget = true;
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(100, 26),
-                            ),
-                            child: const Text('Ride'),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(
-                              left: 5, right: 5, top: 10, bottom: 10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/done');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: const Color(0xff1F41BB),
-                              minimumSize: const Size(100, 26),
-                            ),
-                            child: const Text('Done'),
-                          ),
+                        Text(
+                          busRoutes[index],
+                          style: const TextStyle(fontSize: 12),
                         ),
                       ],
                     ),
+                  );
+                }),
+              )
+
+                ],
+              ),
+              if(descriptionTextIsNotEmpty)
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'What is the next step?',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                      margin: const EdgeInsets.only(left: 15, right: 5, top: 10, bottom: 10),
+                      child: ElevatedButton(
+                        onPressed: (){
+                          Navigator.of(context).pushNamed('/walk');
+                          },
+                        style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xff1F41BB),
+                        minimumSize: const Size(100, 26), 
+                        ),
+                        child: const Text('Walk'),
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
+                      child: ElevatedButton(
+                      onPressed: (){
+                        //showWalkWidget = true;
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xff1F41BB),
+                        minimumSize: const Size(100, 26), 
+                      ),
+                      child: const Text('Ride'),
+                    ),
+                  ),
+                  Container(
+                      margin: const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 10),
+                      child: ElevatedButton(
+                        onPressed: (){
+                          Navigator.of(context).pushNamed('/done');
+                          },
+                        style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xff1F41BB),
+                        minimumSize: const Size(100, 26), 
+                        ),
+                        child: const Text('Done'),
+                      ),
+                    ),
                   ],
-                )
+                  ),
+                ],
+              )
             ],
           ),
         ),
