@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
             fontFamily: 'Poppins', scaffoldBackgroundColor: Colors.white),
-        //home: const RouteFinder()
-        home: Dashboard());
+        home: const RouteFinder());
+    //home: Dashboard());
+    // home: PolylineWithWaypoints());
   }
 }

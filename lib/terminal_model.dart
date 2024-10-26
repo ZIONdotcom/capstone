@@ -29,28 +29,35 @@ class RouteSuggest {
   final int franchiseID;
   final LatLng pointA;
   final LatLng pointB;
+  final List<LatLng> waypoints;
   final List<LatLng> routeCoordinates;
 
   RouteSuggest({
     required this.franchiseID,
     required this.pointA,
     required this.pointB,
+    required this.waypoints,
     required this.routeCoordinates,
   });
 
   factory RouteSuggest.fromJson(Map<String, dynamic> json) {
     return RouteSuggest(
-      franchiseID:
-          int.parse(json['franchise_ID']), // Ensure to parse the string to int
+      franchiseID: int.parse(json['franchise_ID']),
       pointA: LatLng(
-        double.parse(json['point_A_x']),
-        double.parse(json['point_A_y']),
+        double.parse(json['point_A']['x']),
+        double.parse(json['point_A']['y']),
       ),
       pointB: LatLng(
-        double.parse(json['point_B_x']),
-        double.parse(json['point_B_y']),
+        double.parse(json['point_B']['x']),
+        double.parse(json['point_B']['y']),
       ),
-      routeCoordinates: [], // Initialize as needed
+      routeCoordinates: [],
+      waypoints: (json['waypoints'] as List<dynamic>).map((wp) {
+        return LatLng(
+          double.parse(wp['latitude']),
+          double.parse(wp['longitude']),
+        );
+      }).toList(),
     );
   }
 }

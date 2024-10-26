@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:capstone/pages/main_RouteFinder2.dart';
 
 import 'package:uuid/uuid.dart';
 
@@ -34,24 +35,24 @@ class _RouteFinderState extends State<RouteFinder> {
         long_origin.isNotEmpty &&
         lat_destination.isNotEmpty &&
         long_destination.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RouteFinder2(
-            latOrigin: lat_origin,
-            longOrigin: long_origin,
-            latDestination: lat_destination,
-            longDestination: long_destination,
-            destinationName: fromController.text,
-            originName: toController.text,
-          ),
-        ),
-      );
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => RouteFinder2(
+      //       latOrigin: lat_origin,
+      //       longOrigin: long_origin,
+      //       latDestination: lat_destination,
+      //       longDestination: long_destination,
+      //       destinationName: fromController.text,
+      //       originName: toController.text,
+      //     ),
+      //   ),
+      // );
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => Test(
+          builder: (context) => MainRoutefinder2(
             latOrigin: lat_origin,
             longOrigin: long_origin,
             latDestination: lat_destination,
