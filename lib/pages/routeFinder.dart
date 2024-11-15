@@ -1,11 +1,9 @@
-import 'package:capstone/pages/routeFinder2.dart';
-import 'package:capstone/pages/test.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:capstone/pages/main_RouteFinder2.dart';
-
+import 'package:capstone/pages/algodraft.dart';
+import 'package:capstone/pages/test.dart';
 import 'package:uuid/uuid.dart';
 
 class RouteFinder extends StatefulWidget {
@@ -38,7 +36,7 @@ class _RouteFinderState extends State<RouteFinder> {
       // Navigator.push(
       //   context,
       //   MaterialPageRoute(
-      //     builder: (context) => RouteFinder2(
+      //     builder: (context) => Test(
       //       latOrigin: lat_origin,
       //       longOrigin: long_origin,
       //       latDestination: lat_destination,
@@ -49,19 +47,51 @@ class _RouteFinderState extends State<RouteFinder> {
       //   ),
       // );
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MainRoutefinder2(
-            latOrigin: lat_origin,
-            longOrigin: long_origin,
-            latDestination: lat_destination,
-            longDestination: long_destination,
-            destinationName: fromController.text,
-            originName: toController.text,
-          ),
-        ),
-      );
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => MainRoutefinder2(
+      //       latOrigin: lat_origin,
+      //       longOrigin: long_origin,
+      //       latDestination: lat_destination,
+      //       longDestination: long_destination,
+      //       destinationName: fromController.text,
+      //       originName: toController.text,
+      //     ),
+      //   ),
+      // );
+
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => RouteFinderAlgo(
+      //       latOrigin: lat_origin,
+      //       longOrigin: long_origin,
+      //       latDestination: lat_destination,
+      //       longDestination: long_destination,
+      //       destinationName: fromController.text,
+      //       originName: toController.text,
+      //     ),
+      //   ),
+      // );
+
+      setState(() {
+        reportDialog(context);
+      });
+
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => RouteFinderAlgodraft(
+      //       latOrigin: lat_origin,
+      //       longOrigin: long_origin,
+      //       latDestination: lat_destination,
+      //       longDestination: long_destination,
+      //       destinationName: fromController.text,
+      //       originName: toController.text,
+      //     ),
+      //   ),
+      // );
     }
   }
 
@@ -96,6 +126,85 @@ class _RouteFinderState extends State<RouteFinder> {
     toFocusNode.dispose();
     super.dispose();
   }
+
+  void reportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            width: 350, // Set the desired width
+            padding: const EdgeInsets.all(20), // Optional: Add padding
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Choose a route Suggesting option:",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween, // Space out the buttons
+                  children: [
+                    TextButton(
+                      child: const Text("Google Transit"),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Test(
+                              latOrigin: lat_origin,
+                              longOrigin: long_origin,
+                              latDestination: lat_destination,
+                              longDestination: long_destination,
+                              destinationName: fromController.text,
+                              originName: toController.text,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    TextButton(
+                      child: const Text("Application Suggestion"),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RouteFinderAlgodraft(
+                              latOrigin: lat_origin,
+                              longOrigin: long_origin,
+                              latDestination: lat_destination,
+                              longDestination: long_destination,
+                              destinationName: fromController.text,
+                              originName: toController.text,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  //RouteFinder || get curerent Location, Fetch searching Suggestion,
 
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -140,11 +249,11 @@ class _RouteFinderState extends State<RouteFinder> {
     }
   }
 
+  //RouteFinder || get LatLong of searched Location
   Future<void> fetchLatLong(String placeDescription) async {
     final encodedDescription = Uri.encodeComponent(placeDescription);
     final String url =
         'https://maps.googleapis.com/maps/api/geocode/json?address=$encodedDescription&key=$apiKey';
-
     try {
       final response = await http.get(Uri.parse(url));
 

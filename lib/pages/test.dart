@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,38 +33,57 @@ class Test extends StatefulWidget {
   // const RouteFinder2({super.key});
 
   @override
-  testState createState() => testState();
+  _MyWidgetState createState() => _MyWidgetState();
 }
 
-class testState extends State<Test> {
-  //add step to the list
-  List<dynamic> steps =
-      []; //DONE-------------------------------------------------------
-  //if there is a tricycle
-  late bool tricycle; //DONE--------------------------------------------------
-  //late bool isWalk;
+class _MyWidgetState extends State<Test> {
+  // Constants and initial setup variables, including Google Map API key and initial camera position.
+  final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  GoogleMapController? mapController;
+  final Set<Polyline> _polylines = {};
+  Set<Marker> markers = {};
 
-  // call the API and fetch terminals
-  Future<List<Terminal>> fetchTerminals() async {
-    //DONE-----------------------------------
-    final response = await http.get(Uri.parse(
-        'https://rutaco.online/routeFinderPhp/getTerminalLocation.php'));
+  //Variables for coordinates, polylines, steps and route selections.
+  List<LatLng> polylineCoordinates = [];
+  List<Map<String, dynamic>> selectedLegs = [];
+  List<Map<String, dynamic>> publicTransportRoutes = [];
+  List<dynamic> steps = [];
+  Set<Polyline> polylines = {};
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Terminal.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load terminals');
-    }
+  //Controllers for managing input fields for "To" and "From" locations.
+  final TextEditingController _controllerTo = TextEditingController();
+  final TextEditingController _controllerFrom = TextEditingController();
+  bool isSwapped = false;
+
+  //Utility methods for distance and conversion calculations.
+  late double distanceMainRoad;
+  late double distanceInMeter = 0.0;
+  double radians(double degrees) {
+    return degrees * (pi / 180.0);
   }
 
-//calculate distance
+  double _degreeToRadian(double degree) {
+    return degree * pi / 180;
+  }
+
+  double calculateDistances(LatLng point1, LatLng point2) {
+    //calculate distance between two LatLng points (in meters)
+    // Use haversine formula to calculate distance between two LatLng points
+    const double R = 6371000; // Earth radius in meters
+    final dLat = radians(point2.latitude - point1.latitude);
+    final dLon = radians(point2.longitude - point1.longitude);
+
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(radians(point1.latitude)) *
+            cos(radians(point2.latitude)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
+
   double calculateDistance(
-      //DONE------------------------------
-      double startLat,
-      double startLng,
-      double endLat,
-      double endLng) {
+      double startLat, double startLng, double endLat, double endLng) {
     const earthRadius = 6371; // Earth's radius in kilometers
 
     double dLat = _degreeToRadian(endLat - startLat);
@@ -79,43 +99,50 @@ class testState extends State<Test> {
     return earthRadius * c;
   }
 
-  double _degreeToRadian(double degree) {
-    //DONE-------------------
-    return degree * pi / 180;
+  double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Radius of the Earth in kilometers
+    final dLat = _degreeToRadian(lat2 - lat1);
+    final dLon = _degreeToRadian(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreeToRadian(lat1)) *
+            cos(_degreeToRadian(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c; // Distance in kilometers
   }
 
-//nearest terminal
-  Future<Terminal> getNearestTerminal(LatLng location) async {
-    //DONE---------------------------------
-    List<Terminal> terminals = await fetchTerminals();
+  //State variables for tracking user's origin, destination, and nearest road coordinates.
+  late double originlat, originlong, destinationlat, destinationlong;
+  late double origin, destination;
+  late String roadLat, roadLng;
+  late String lat, long;
 
-    Terminal? nearestTerminal;
-    double minDistance = double.infinity;
-
-    for (Terminal terminal in terminals) {
-      double distance = calculateDistance(
-        location.latitude,
-        location.longitude,
-        terminal.latitude,
-        terminal.longitude,
-      );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestTerminal = terminal;
-      }
-    }
-
-    if (nearestTerminal != null) {
-      return nearestTerminal;
-    } else {
-      throw Exception('No terminals found.');
-    }
+  //Methods for initializing the map and setting markers.
+  BitmapDescriptor? customIcon;
+  void _setCustomMarkerIcon() async {
+    customIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(
+            size: Size(15, 15)), // You can adjust the size if needed
+        'assets/icons/dot.png');
   }
 
-  //steps data
+  //Handles user input actions, including swapping 'To' and 'From' fields.
+  void swapFields() {
+    setState(() {
+      isSwapped = !isSwapped;
+    });
+  }
+
+  void _navigateToSearchPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RouteFinder()),
+    );
+  }
+
+  //Functions for managing steps, such as walk and transportation steps.
   void walkStep(String instruction, LatLng endlocation) {
-    //DONE------------------------------------------
     steps.add(WalkStepModel(
       instruction: instruction,
       endlocation: endlocation,
@@ -123,12 +150,8 @@ class testState extends State<Test> {
     ));
   }
 
-  void transportationStep(
-      String transportation,
-      double fare,
-      String time, //DONE-------------------------------------------
-      LatLng geton,
-      LatLng getoff) {
+  void transportationStep(String transportation, double fare, String time,
+      LatLng geton, LatLng getoff) {
     steps.add(TransportStepModel(
       transportation: transportation,
       fare: fare,
@@ -138,218 +161,16 @@ class testState extends State<Test> {
     ));
   }
 
-  //distance walk math
-  late double distanceMainRoad; //DONE--------------------------
-  late double distanceInMeter = 0.0; //DONE-------------------------------
-  double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-    //DONE-----------------------------
-    const R = 6371; // Radius of the Earth in kilometers
-    final dLat = _degreesToRadians(lat2 - lat1);
-    final dLon = _degreesToRadians(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degreesToRadians(lat1)) *
-            cos(_degreesToRadians(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c; // Distance in kilometers
+  //Methods for fetching and displaying suggested routes.------------------------------------------------------------------------------
+  double proximityThreshold = 300.0; //meter
+  List<RouteSuggest> allRoutes = [];
+
+  Future<void> loadRoutes() async {
+    allRoutes = await fetchRoutesFromAPI(); // Load routes into allRoutes
+    // You can now use allRoutes for other operations
   }
-
-  double _degreesToRadians(double degrees) {
-    //DUPLICATE------------------
-    return degrees * pi / 180;
-  }
-
-  //roads
-  late String roadLat; //DONE ------------------------------
-  late String roadLng; // DONE -----------------------------
-  // Function to get nearest road using Google Maps Roads API
-  Future<void> getNearestRoad(double latitude, double longitude) async {
-    //DONE---------------------------------------------
-    final String url =
-        'https://roads.googleapis.com/v1/snapToRoads?path=$latitude,$longitude&key=$apiKey';
-
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      // Handle the response data
-      if (data['snappedPoints'].isNotEmpty) {
-        var nearestRoad = data['snappedPoints'][0];
-        roadLat = nearestRoad['location']['latitude'].toString();
-        roadLng = nearestRoad['location']['longitude'].toString();
-        print('Nearest Road: ${nearestRoad['location']}');
-
-        // Now calculate the distance once the roadLat and roadLng are available
-        if (lat.isNotEmpty && long.isNotEmpty) {
-          double distanceMainRoad = haversineDistance(
-            double.parse(lat),
-            double.parse(long),
-            double.parse(roadLat),
-            double.parse(roadLng),
-          );
-          distanceInMeter = distanceMainRoad * 1000;
-
-          print(
-              'haaaaaaaaaaaaaaaaaaaaaaaaaaa----------------------------- $roadLat , $roadLng');
-          print('Distance to nearest main road: $distanceMainRoad');
-          print(
-              'Distance to nearest main road: ${distanceInMeter.toStringAsFixed(2)} meters');
-        } else {
-          print(
-              'Error: Unable to calculate distance, lat/long values are missing.');
-        }
-      } else {
-        print('No roads found nearby.');
-      }
-    } else {
-      print('Failed to get nearest road: ${response.statusCode}');
-    }
-  }
-
-  late double originlat; //DONE--------------------------------------------
-  late double originlong; //DONE--------------------------------------------
-  late double destinationlat; //DONE--------------------------------------------
-  late double
-      destinationlong; //DONE--------------------------------------------
-  late double origin; //DONE--------------------------------------------
-  late double destination; //DONE--------------------------------------------
-// Main function to check nearest road and terminals
-  Future<void> checkNearest() async {
-    //DONE--------------------------
-    Position userLocation = await getCurrentLocation();
-
-    originlat = double.parse(widget.latOrigin);
-    originlong = double.parse(widget.longOrigin);
-    destinationlat = double.parse(widget.latDestination);
-    destinationlong = double.parse(widget.longDestination);
-
-    // Get nearest road
-    await getNearestRoad(originlat, originlong);
-    print('srfgswrgwr $originlat , $originlong');
-
-    // // Find nearby public terminals
-    // await findNearbyTerminals(userLocation.latitude, userLocation.longitude);
-  }
-
-  //gps
-  late String lat; //DONE------------------------
-  late String long; //DONE-----------------------
-  Future<Position> getCurrentLocation() async {
-    //DONE--------------------------------------------------
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location service are disabled');
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permission is denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request');
-    }
-
-    return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-  }
-
-  GoogleMapController? mapController; //DONE-----------------------------
-  List<LatLng> polylineCoordinates =
-      []; //DONE------------------------------------------
-  final Set<Polyline> _polylines = {}; //DONE-----------------------------
-
-  //late String lat_origin, long_origin, lat_destination, long_destination;
-  final String apiKey =
-      'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY'; //DONE------------------------------------------------------------
-  //swap
-  bool isSwapped = false; //DONE----------------------------------------
-  final TextEditingController _controllerTo =
-      TextEditingController(); //DONE---------------------------------------------
-  final TextEditingController _controllerFrom =
-      TextEditingController(); //DONE----------------------------------------
-  List<Map<String, dynamic>> selectedLegs =
-      []; //DONE-------------------------------------------------------------
-
-  void _navigateToSearchPage() {
-    //DONE------------------------------------
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RouteFinder()),
-    );
-  }
-
-  void swapFields() {
-    //DONE---------------------------------
-    setState(() {
-      isSwapped = !isSwapped;
-    });
-  }
-  //end swap ----------------------------------------------------------
-
-  //marker
-  //final Set<Marker> _markers = {};
-  Set<Marker> markers = {}; //DONE-----------------------------------------
-
-  //gps livelocation ------------- if want ng custom marker
-  // void liveLocation() {
-  //   LocationSettings locationSettings = const LocationSettings(
-  //     accuracy: LocationAccuracy.high,
-  //     distanceFilter: 100,
-  //   );
-
-  //   Geolocator.getPositionStream(locationSettings: locationSettings)
-  //       .listen((Position position) {
-  //     lat = position.latitude.toString();
-  //     long = position.longitude.toString();
-
-  //     setState(() {
-  //       print('Latitude: $lat, Longtitude: $long ====== Location Updates');
-  //       markers.clear();
-  //       markers.add(Marker(
-  //         markerId: MarkerId('current_location'),
-  //         position: LatLng(position.latitude, position.longitude),
-  //         infoWindow: InfoWindow(title: 'Current Location'),
-  //         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-  //       ));
-  //       mapController?.animateCamera(CameraUpdate.newLatLng(
-  //           LatLng(position.latitude, position.longitude)));
-  //     });
-  //   });
-  // }
-  // add step list
-  Future<void> addStep() async {
-    //DONE-----------------------------
-    if (distanceInMeter < 200 ||
-        (distanceInMeter >= 200 && tricycle == false)) {
-      // walk == true
-      LatLng endwalk = LatLng(double.parse(roadLat), double.parse(roadLng));
-      String endwalkAddress = await getAddressFromLatLng(
-          double.parse(roadLat), double.parse(roadLng));
-      walkStep('Walk to $endwalkAddress', endwalk);
-
-      for (var s in steps) {
-        print('${s}eyyyyyyyyyyyyy'); // This will now print meaningful details
-      }
-
-      print(
-          'end walk------------------ $endwalk and $endwalkAddress ------------=====================');
-    } else if (distanceInMeter >= 200 && tricycle == true) {
-      //walk = false
-      print('noooooooooooooooooooooooo');
-    }
-  }
-
-  //route suggestion----------------------------------------------------------------------------
-  Set<Polyline> polylines = {}; //DONE-----------------------------
 
   Future<List<RouteSuggest>> fetchRoutesFromAPI() async {
-    //DONE-----------------------------------------------
     final response = await http
         .get(Uri.parse('https://rutaco.online/routeFinderPhp/routePoints.php'));
 
@@ -368,26 +189,28 @@ class testState extends State<Test> {
         LatLng pointA = routeSuggest.pointA;
         LatLng pointB = routeSuggest.pointB;
         List<LatLng> waypoints = routeSuggest.waypoints;
+        int terminalID = routeSuggest.terminalID;
+        int transportationID = routeSuggest.transportationID;
 
         // Debugging: Print parsed franchise ID, pointA, pointB, and waypoints
         print(
-            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints");
+            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID ");
 
         // Fetch the route coordinates using Google Directions API, including waypoints
         List<LatLng> routeCoordinates =
             await fetchRouteCoordinates(pointA, pointB, waypoints);
 
-        // Create individual polyline for this route
-        Polyline polyline = Polyline(
-          polylineId:
-              PolylineId(franchiseID.toString()), // Unique ID for each route
-          points: routeCoordinates,
-          color: Colors.blue, // Customize the polyline color
-          width: 5,
-        );
-        setState(() {
-          _polylines.add(polyline);
-        });
+        // Create individual polyline for this route FOR TESTING
+        // Polyline polyline = Polyline(
+        //   polylineId:
+        //       PolylineId(franchiseID.toString()), // Unique ID for each route
+        //   points: routeCoordinates,
+        //   color: Colors.blue, // Customize the polyline color
+        //   width: 5,
+        // );
+        // setState(() {
+        //   _polylines.add(polyline);
+        // });
 
         // Return RouteSuggest including waypoints
         return RouteSuggest(
@@ -395,7 +218,9 @@ class testState extends State<Test> {
           pointA: pointA,
           pointB: pointB,
           routeCoordinates: routeCoordinates,
-          waypoints: waypoints, // Include waypoints in the return
+          waypoints: waypoints,
+          terminalID: terminalID,
+          transportationID: transportationID,
         );
       }).toList());
 
@@ -405,9 +230,184 @@ class testState extends State<Test> {
     }
   }
 
-//Test
+  // Proximity threshold for endpoint (`point_B`) check
+  // double endproximityThreshold = 300.0; // meters, for near endpoint
+
+// Proximity threshold for route proximity check
+  double routeProximityThreshold = 300.0; // meters, for along the route
+
+  List<RouteSuggest> nearbyRoutes = [];
+
+  Future<void> findNearbyRoutes(LatLng origin) async {
+    // Fetch routes from the database
+    List<RouteSuggest> routes = await fetchRoutesFromAPI();
+
+    // Check if any route is within proximity of the user's pointA/ destination
+    for (var route in routes) {
+      // Calculate distance to Point A and Point B
+      double distanceToPointA = calculateDistances(origin, route.pointA);
+      double distanceToPointB = calculateDistances(origin, route.pointB);
+
+      // Check the distance to each coordinate in the route || NEAR ROUTE - input Origin
+      for (var point in route.routeCoordinates) {
+        double distanceToRoutePoint = calculateDistances(origin, point);
+        if (distanceToRoutePoint <= proximityThreshold) {
+          nearbyRoutes.add(route);
+        }
+      }
+      // Optionally log distances for debugging
+      print('Route Franchise ID: ${route.franchiseID}');
+      print('Distance to Point A: $distanceToPointA meters');
+      print('Distance to Point B: $distanceToPointB meters');
+    }
+    if (nearbyRoutes.isNotEmpty) {
+      // Suggest these routes to the user
+      displayRoutes(nearbyRoutes);
+    } else {
+      // No nearby routes found
+      print("No routes nearby end");
+    }
+  }
+
+  List<RouteSuggest> routesEnd = [];
+  //Route point b that is near or exactly the destination of the user
+  Future<void> neabyRoutesEnd(LatLng destination) async {
+    // Routes that end near the destination
+    List<RouteSuggest> alongRouteDestination =
+        []; // Routes that pass near the destination
+    // Check if any route/pointb is within proximity of the destination
+    for (var route in nearbyRoutes) {
+      // Calculate distance to Point B
+      double distanceToPointB = calculateDistances(destination, route.pointB);
+      //check if destination is near the point b of terminal
+      if (distanceToPointB <= proximityThreshold) {
+        print(
+            "Destination is near the endpoint (point_B) of route ID: ${route.franchiseID}");
+        routesEnd.add(route);
+        continue; // No need to check route points if near endpoint
+      }
+      // If destination is not near `point_B`, check if it lies along the route
+      bool destinationOnRoute = false;
+      for (var routePoint in route.routeCoordinates) {
+        // Calculate distance to each route point
+        double distanceToRoutePoint =
+            calculateDistances(destination, routePoint);
+
+        // If destination is within the route proximity threshold, add route
+        if (distanceToRoutePoint <= routeProximityThreshold) {
+          destinationOnRoute = true;
+          print(
+              "Destination lies along the route of route ID: ${route.franchiseID}");
+          alongRouteDestination.add(route);
+        }
+      }
+    }
+
+    // Display the results
+    if (routesEnd.isNotEmpty || alongRouteDestination.isNotEmpty) {
+      // Display routes ending near the destination
+      if (routesEnd.isNotEmpty) {
+        print("Routes ending near the destination:");
+      }
+
+      // Display routes passing near the destination
+      if (alongRouteDestination.isNotEmpty) {
+        print("Routes passing along the destination:");
+      }
+    } else {
+      // No nearby routes found
+      print("No routes nearby");
+    }
+  }
+
+// Routes with destination along the path
+  List<RouteSuggest> nearEndTerminal = [];
+  List<RouteSuggest> alongRoutesTerminal = [];
+  Future<void> nearbyTerminalsEnd(
+      LatLng destination, List<Terminal> nearestTerminals) async {
+    // Fetch the routes first
+    List<RouteSuggest> routes = await fetchRoutesFromAPI();
+
+    // Check if any terminal pointB is within proximity of the destination
+    for (var terminal in nearestTerminals) {
+      // Filter routes by matching terminal ID
+      for (var route in routes) {
+        if (terminal.id == route.terminalID) {
+          // Calculate the distance from the destination to the point B of the route
+          double distanceToPointB =
+              calculateDistances(destination, route.pointB);
+
+          // Check if the destination is near point B
+          if (distanceToPointB <= proximityThreshold) {
+            print(
+                "Destination is near the endpoint (point_B) of Terminal ID: ${route.terminalID}");
+            nearEndTerminal.add(route);
+          }
+
+          // Now check if the destination is close to any route point (not just point B)
+          bool destinationOnRouteTerminal = false;
+          for (var routePoint in route.routeCoordinates) {
+            double distanceToRoutePoint =
+                calculateDistances(destination, routePoint);
+
+            if (distanceToRoutePoint <= routeProximityThreshold) {
+              destinationOnRouteTerminal = true;
+              break;
+            }
+          }
+
+          // If the destination is on the route, add it to alongRoutesTerminal
+          if (destinationOnRouteTerminal) {
+            print(
+                "Destination lies along the route of Terminal ID: ${route.terminalID}");
+            alongRoutesTerminal.add(route);
+          }
+        }
+      }
+    }
+
+    // Display the results
+    if (nearEndTerminal.isNotEmpty || alongRoutesTerminal.isNotEmpty) {
+      if (alongRoutesTerminal.isNotEmpty) {
+        print("Routes with destination along the route:");
+        for (var route in alongRoutesTerminal) {
+          print("Franchise ID: ${route.franchiseID}");
+        }
+      }
+
+      if (nearEndTerminal.isNotEmpty) {
+        print("Nearby terminals with point B near the destination:");
+        for (var route in nearEndTerminal) {
+          print(
+              "Terminal ID: ${route.terminalID}, Franchise ID: ${route.franchiseID}");
+        }
+      }
+    } else {
+      print("No nearby terminals or routes found.");
+    }
+  }
+
+  void displayRoutes(List<RouteSuggest> nearbyRoutes) {
+    for (var route in nearbyRoutes) {
+      print(
+          'Nearby Route: Franchise ID: ${route.franchiseID}, Points: ${route.pointA}, ${route.pointB}');
+      // You can update your UI here
+    }
+  }
+
+  Future<List<Terminal>> fetchTerminals() async {
+    final response = await http.get(Uri.parse(
+        'https://rutaco.online/routeFinderPhp/getTerminalLocation.php'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Terminal.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load terminals');
+    }
+  }
+
   void fetchAndPrintRoutes() async {
-    //DONE----------------------------
     try {
       List<RouteSuggest> routes = await fetchRoutesFromAPI();
 
@@ -421,89 +421,8 @@ class testState extends State<Test> {
     }
   }
 
-  Future<void> findNearbyRoutes(LatLng userLocation) async {
-    //DONE----------------------------
-    // Fetch routes from the database
-    List<RouteSuggest> routes = await fetchRoutesFromAPI();
-
-    // Define proximity threshold (e.g., 100 meters)
-    const double proximityThreshold = 300.0;
-
-    List<RouteSuggest> nearbyRoutes = [];
-
-    // Check if any route is within proximity of the user's location
-    for (var route in routes) {
-      // Calculate distance to Point A and Point B
-      double distanceToPointA = calculateDistances(userLocation, route.pointA);
-      double distanceToPointB = calculateDistances(userLocation, route.pointB);
-
-      // Print route coordinates for debugging
-      print(
-          'Route Franchise ID:------------------------------------------------------------------------------------------------------------------------------------------------------------- ${route.franchiseID} , Route Coordinates:');
-      for (var point in route.routeCoordinates) {
-        print('Latitude: ${point.latitude}, Longitude: ${point.longitude}');
-      }
-
-      // Check the distance to each coordinate in the route
-      for (var point in route.routeCoordinates) {
-        double distanceToRoutePoint = calculateDistances(userLocation, point);
-        if (distanceToRoutePoint <= proximityThreshold) {
-          nearbyRoutes.add(route);
-          break; // No need to check other points if we already found a nearby route
-        }
-      }
-
-      // Optionally log distances for debugging
-      print('Route Franchise ID: ${route.franchiseID}');
-      print('Distance to Point A: $distanceToPointA meters');
-      print('Distance to Point B: $distanceToPointB meters');
-    }
-
-    if (nearbyRoutes.isNotEmpty) {
-      // Suggest these routes to the user
-      displayRoutes(nearbyRoutes);
-    } else {
-      // No nearby routes found
-      print("No routes nearby");
-    }
-  }
-
-  void displayRoutes(List<RouteSuggest> nearbyRoutes) {
-    //DONE-----------------------------------
-    for (var route in nearbyRoutes) {
-      print(
-          'Nearby Route: Franchise ID: ${route.franchiseID}, Points: ${route.pointA}, ${route.pointB}');
-      // You can update your UI here
-    }
-  }
-
-  double calculateDistances(LatLng point1, LatLng point2) {
-    //DONE---------------------------------------------------------
-    //calculate distance between two LatLng points (in meters)
-    // Use haversine formula to calculate distance between two LatLng points
-    const double R = 6371000; // Earth radius in meters
-    final dLat = radians(point2.latitude - point1.latitude);
-    final dLon = radians(point2.longitude - point1.longitude);
-
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(radians(point1.latitude)) *
-            cos(radians(point2.latitude)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
-  }
-
-//convert degrees to radians
-  double radians(double degree) =>
-      degree * pi / 180; //DONE---------------------------
-
-  //coordinates 2.0 with points
   Future<List<LatLng>> fetchRouteCoordinates(
-      //DONE-------------------------------------
-      LatLng start,
-      LatLng end,
-      List<LatLng> waypoints) async {
+      LatLng start, LatLng end, List<LatLng> waypoints) async {
     String waypointsString = waypoints
         .map((point) => '${point.latitude},${point.longitude}')
         .join('|');
@@ -526,241 +445,8 @@ class testState extends State<Test> {
     }
   }
 
-  List<LatLng> decodePolylines(String encoded) {
-    //DONE-------------------------------------
-    List<LatLng> points = [];
-    int index = 0, len = encoded.length;
-    int lat = 0, lng = 0;
-
-    while (index < len) {
-      int shift = 0, result = 0;
-      int b;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1F) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1F) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.add(LatLng(lat / 1E5, lng / 1E5));
-    }
-    return points;
-  }
-
-  @override
-  void initState() {
-    //DONE-------------------------
-    super.initState();
-    _controllerTo.text = widget.originName;
-    _controllerFrom.text = widget.destinationName;
-
-    print(
-        'TEST ---------------------------mmjksfkdbjgbker     jksbjfbsr -----------------------origin: ${widget.latOrigin}, ${widget.longOrigin}long: ${widget.latDestination}, ${widget.longDestination}');
-    LatLng sample = const LatLng(14.827017, 120.883796);
-
-    //test latlng sample should be palitan ng origin latlng
-
-    //TEST ZONE
-    //routes from db
-    fetchAndPrintRoutes();
-
-    //test latlng sample should be palitan ng origin latlng
-    // function to get the nearest terminal
-    getNearestTerminal(sample).then((nearestTerminal) {
-      print('Nearest Terminal: ${nearestTerminal.name}');
-      print('Terminal ID: ${nearestTerminal.id}');
-      print('Latitude: ${nearestTerminal.latitude}');
-      print('Longitude: ${nearestTerminal.longitude}');
-    }).catchError((error) {
-      print('Error finding nearest terminal: $error');
-    });
-    // Call the function to fetch terminals and print the results
-    fetchTerminals().then((terminals) {
-      for (Terminal terminal in terminals) {
-        print(
-            'Terminal ID: ${terminal.id}, Name: ${terminal.name}, Latitude: ${terminal.latitude}, Longitude: ${terminal.longitude}');
-      }
-    }).catchError((error) {
-      print('Error fetching terminals: $error');
-    });
-    print('ewan ko kung gagana ${getNearestTerminal(sample)}');
-
-    //nearby routes passing - ongoing
-    findNearbyRoutes(sample);
-
-    //TESt - ongoing
-    //testFetchRouteCoordinates();
-
-    //TESt
-    checkNearest().then((_) {
-      addStep();
-    });
-    //gps
-    getCurrentLocation().then(
-      (value) {
-        lat = '${value.latitude}';
-        long = '${value.longitude}';
-        setState(() {
-          print('Latitude: $lat, Longtitude: $long');
-          markers.add(Marker(
-            markerId: const MarkerId('current_location'),
-            position: LatLng(value.latitude, value.longitude),
-            infoWindow: const InfoWindow(title: 'Current Location'),
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          ));
-        });
-        // liveLocation();
-      },
-    );
-
-    fetchRoute();
-
-    _setCustomMarkerIcon();
-    getRoutes();
-  }
-
-  // marker icon
-  BitmapDescriptor? customIcon; //DONE-------------------------------------
-  void _setCustomMarkerIcon() async {
-    //DONE------------------------------
-    customIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(
-            size: Size(15, 15)), // You can adjust the size if needed
-        'assets/icons/dot.png');
-  }
-
-  // marker icon end
-
-  //polyline
-  Future<void> fetchRoute() async {
-    //DONE------------------------------------------------
-    final String url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=${widget.latOrigin},${widget.longOrigin}&destination=${widget.latDestination}&key=$apiKey&alternatives=true';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
-        final routes = jsonResponse['routes'];
-
-        if (routes.isNotEmpty) {
-          final route = routes[0]; // Use the first route
-          final polyline = route['overview_polyline']['points'];
-
-          setState(() {
-            // Decode the polyline into a list of LatLng points
-            polylineCoordinates = decodePolyline(polyline);
-
-            // Clear existing markers and polylines
-
-            _polylines.clear();
-
-            setState(() {
-              _polylines.add(
-                Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: polylineCoordinates,
-                  color: Colors.blue,
-                  width: 5,
-                ),
-              );
-            });
-            // Add polyline to the map
-
-            // Add start and end markers
-            if (polylineCoordinates.isNotEmpty) {
-              final LatLng startLocation = polylineCoordinates.first;
-              final LatLng endLocation = polylineCoordinates.last;
-
-              setState(() {
-                // _markers.add(
-                //   Marker(
-                //     markerId: const MarkerId('start_marker'),
-                //     position: startLocation,
-                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                //     infoWindow: const InfoWindow(title: 'Start Location'),
-                //   ),
-                // );
-
-                // _markers.add(
-                //   Marker(
-                //     markerId: const MarkerId('end_marker'),
-                //     position: endLocation,
-                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                //     infoWindow: const InfoWindow(title: 'End Location'),
-                //   ),
-                // );
-              });
-            }
-          });
-        } else {
-          print("No routes found.");
-        }
-      } else {
-        print("Failed to fetch route. Status code: ${response.statusCode}");
-        print("Response body: ${response.body}");
-      }
-    } catch (e) {
-      print("Error fetching route: $e");
-    }
-  }
-
-  List<LatLng> decodePolyline(String polyline) {
-    //DONE--------------------------------------
-    List<LatLng> coordinates = [];
-    int index = 0;
-    int len = polyline.length;
-    int lat = 0;
-    int lng = 0;
-
-    while (index < len) {
-      int b, shift = 0, result = 0;
-      do {
-        b = polyline.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int deltaLat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += deltaLat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = polyline.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int deltaLng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += deltaLng;
-
-      coordinates.add(LatLng(lat / 1E5, lng / 1E5));
-    }
-
-    return coordinates;
-  }
-
-  //polyline
-
-  //transportation suggestion transit
-  // Fetch public transport routes from the API
   Future<List<Map<String, dynamic>>> fetchPublicTransportRoutes(
-      //DONE------------------------------------------
-      String origin,
-      String destination,
-      String apiKey) async {
+      String origin, String destination, String apiKey) async {
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&mode=transit&alternatives=true&key=$apiKey';
 
@@ -810,33 +496,7 @@ class testState extends State<Test> {
     }
   }
 
-  List<Map<String, dynamic>> publicTransportRoutes =
-      []; //DONE-----------------------------------------------------------
-
-  //latlng to human readable address
-  Future<String> getAddressFromLatLng(double latitude, double longitude) async {
-    //DONE------------------------------
-    try {
-      // Get the list of placemarks from the coordinates
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(latitude, longitude);
-
-      // Get the first placemark (usually the most accurate)
-      Placemark place = placemarks[0];
-
-      // Return a more structured format similar to Google Maps
-      // Example: "Place Name, Locality, City, Country"
-      return "${place.name}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
-    } catch (e) {
-      print(e);
-      return "Address not found"; // Return null if there's an error
-    }
-  }
-
-  // Call this method to get the routes and update the UI
-  // Call this method to get the routes and print the details in the terminal
   void getRoutes() async {
-    //DONE---------------------------------
     try {
       print(
           'Fetching routes....................................................................................||||||||||||||||||||||||||||');
@@ -914,11 +574,598 @@ class testState extends State<Test> {
     }
   }
 
-  //end transportation suggestion transit ----------------------
-  //map end -----------------------------------------------
+  //tranfer routes --------------------------------------------------------------------------------------------------------------------
+  // Define a list to store connecting terminals
+
+  // Helper function to fetch routes associated with a specific terminal ID
+  Future<List<RouteSuggest>> routesForTerminal(int terminalId) async {
+    // Filter routes by terminal ID
+    List<RouteSuggest> terminalRoutes =
+        allRoutes.where((route) => route.terminalID == terminalId).toList();
+
+    return terminalRoutes;
+  }
+
+  List<TerminalPath> allConnectingPaths = []; // Store all connecting paths
+
+  //v2
+  List<TransferPoint> findTransferPoints(
+      List<RouteSuggest> nearbyRoutes, List<RouteSuggest> routesEnd) {
+    List<TransferPoint> transferPoints = [];
+
+    // Early exit if there are no nearby or destination routes
+    if (nearbyRoutes.isEmpty || routesEnd.isEmpty) {
+      print("No nearby or destination routes to check for transfers.");
+      return [];
+    }
+
+    // Iterate over each nearby route from the origin
+    for (var originRoute in nearbyRoutes) {
+      // Iterate over each route ending near the destination
+      for (var destinationRoute in routesEnd) {
+        // Check for transfer points near the coordinates of both routes
+        for (var originPoint in originRoute.routeCoordinates) {
+          for (var destinationPoint in destinationRoute.routeCoordinates) {
+            // Calculate the distance between the two points
+            double transferDistance =
+                calculateDistances(originPoint, destinationPoint);
+
+            if (transferDistance <= routeProximityThreshold) {
+              // Check if this transfer point already exists in the list
+              bool isDuplicate1 = false;
+              for (var tp in transferPoints) {
+                // Check if the transfer point with the same origin and destination already exists
+                if (tp.fromRoute.franchiseID == originRoute.franchiseID &&
+                    tp.toRoute.franchiseID == destinationRoute.franchiseID) {
+                  isDuplicate1 = true;
+                }
+              }
+              //Add the transfer point if it's not a duplicate
+              if (!isDuplicate1) {
+                print(
+                    "Transfer point found between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID} at $originPoint and $destinationPoint");
+
+                // transferPoints.add(TransferPoint(
+                //   fromRoute: originRoute,
+                //   toRoute: destinationRoute,
+                //   transferLocation:
+                //       destinationRoute.pointA, // Location where transfer occurs
+                // ));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Log results if transfer points are identified
+    if (transferPoints.isNotEmpty) {
+      print("Transfer points found:");
+      for (var transfer in transferPoints) {
+        print(
+            "Transfer from Route ${transfer.fromRoute.franchiseID} to Route ${transfer.toRoute.franchiseID} at ${transfer.transferLocation}");
+      }
+    } else {
+      print("No transfer points found between routes.");
+    }
+
+    return transferPoints; // Return the list of transfer points
+  }
+
+  List<List<TransferPoint>> findConnectedTransferPaths(
+      List<RouteSuggest> nearbyRoutes,
+      List<RouteSuggest> routesEnd,
+      LatLng destination) {
+    List<List<TransferPoint>> connectedPaths =
+        []; // Stores all possible paths to destination
+
+    // Early exit if routes are not available
+    if (nearbyRoutes.isEmpty || routesEnd.isEmpty) {
+      print("No nearby or destination routes to check for transfers.");
+      return [];
+    }
+
+    // Helper function for recursive path finding
+    List<List<RouteSuggest>> findPath(
+        RouteSuggest startRoute,
+        LatLng destination,
+        List<RouteSuggest> allRoutes,
+        double routeProximityThreshold) {
+      List<List<RouteSuggest>> paths = [];
+      Queue<List<RouteSuggest>> queue = Queue();
+      queue.add([startRoute]);
+
+      while (queue.isNotEmpty) {
+        List<RouteSuggest> currentPath = queue.removeFirst();
+        RouteSuggest currentRoute = currentPath.last;
+
+        // Check if any point along the current route is near the destination
+        for (var routePoint in currentRoute.routeCoordinates) {
+          if (calculateDistances(routePoint, destination) <=
+              routeProximityThreshold) {
+            // If near the destination, mark this path as complete
+            paths.add(currentPath);
+            print("Path found to destination at $routePoint");
+            break;
+          }
+        }
+
+        // If this route has not reached the destination, continue finding transfer points
+        if (paths.isEmpty || paths.last != currentPath) {
+          List<TransferPoint> transferPoints =
+              findTransferPoints([currentRoute], allRoutes);
+
+          for (var transfer in transferPoints) {
+            // Check if this route has already been visited in the current path
+            if (!currentPath.contains(transfer.toRoute)) {
+              List<RouteSuggest> newPath = List.from(currentPath);
+              newPath.add(transfer.toRoute);
+              queue.add(newPath);
+            }
+          }
+        }
+      }
+
+      return paths;
+    }
+
+    List<List<RouteSuggest>> allPaths = [];
+
+    // Start pathfinding for each route in nearbyRoutes
+    for (var originRoute in nearbyRoutes) {
+      // Find paths from each originRoute to the destination
+      List<List<RouteSuggest>> pathsFromOrigin = findPath(
+          originRoute, destination, allRoutes, routeProximityThreshold);
+
+      // Add the found paths to the allPaths list
+      allPaths.addAll(pathsFromOrigin);
+    }
+
+// Now allPaths contains all routes leading from any nearby origin route to the destination
+    print("All possible paths to destination: ");
+    for (var path in allPaths) {
+      print("Path: ${path.map((route) => route.franchiseID).join(' -> ')}");
+    }
+
+    // Log results if paths are identified
+    if (connectedPaths.isNotEmpty) {
+      print("Connected paths leading to destination found:");
+      for (var path in connectedPaths) {
+        print("Path:");
+        for (var transfer in path) {
+          print(
+              "Transfer from Route ${transfer.fromRoute.franchiseID} to Route ${transfer.toRoute.franchiseID} at ${transfer.transferLocation}");
+        }
+      }
+    } else {
+      print("No connected paths to destination found.");
+    }
+
+    return connectedPaths;
+  }
+
+//end transfer routes----------------------------------------------------------------------------------------------------------------
+
+  //Methods for fetching location data, such as nearest terminal, road, and public transport routes.
+  // Global variable to store nearest terminals
+
+  Future<List<Terminal>> getNearestTerminals(LatLng location) async {
+    // Fetch all available terminals
+    List<Terminal> terminals = await fetchTerminals();
+    List<Terminal> nearestTerminals = [];
+
+    // Clear the global list to avoid duplicate entries from previous calls
+    //nearestTerminals.clear();
+
+    LatLng origin = LatLng(location.latitude, location.longitude);
+
+    for (Terminal terminal in terminals) {
+      LatLng terminalLocation = LatLng(terminal.latitude, terminal.longitude);
+      double distance = calculateDistances(origin, terminalLocation);
+
+      print(
+          'Threshold: $distance , Distance: $distance , Terminal: ${terminal.latitude}, ${terminal.longitude}, Location: $origin');
+
+      // Check if terminal is within the minimum distance threshold
+      if (proximityThreshold > distance) {
+        nearestTerminals.add(terminal);
+        print('Nearest Terminal: ${terminal.name}');
+      }
+    }
+
+    // Check if any terminals were found within the threshold
+    if (nearestTerminals.isNotEmpty) {
+      print('Nearest terminals found and stored in global variable.');
+    } else {
+      print('No terminals found within proximity threshold.');
+    }
+
+    // Return the list of nearest terminals
+    return nearestTerminals;
+  }
+
+  Future<void> getNearestRoad(double latitude, double longitude) async {
+    final String url =
+        'https://roads.googleapis.com/v1/snapToRoads?path=$latitude,$longitude&key=$apiKey';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Handle the response data
+      if (data['snappedPoints'].isNotEmpty) {
+        var nearestRoad = data['snappedPoints'][0];
+        roadLat = nearestRoad['location']['latitude'].toString();
+        roadLng = nearestRoad['location']['longitude'].toString();
+        print('Nearest Road: ${nearestRoad['location']}');
+
+        // Now calculate the distance once the roadLat and roadLng are available
+        if (lat.isNotEmpty && long.isNotEmpty) {
+          double distanceMainRoad = haversineDistance(
+            double.parse(lat),
+            double.parse(long),
+            double.parse(roadLat),
+            double.parse(roadLng),
+          );
+          distanceInMeter = distanceMainRoad * 1000;
+
+          print(
+              'haaaaaaaaaaaaaaaaaaaaaaaaaaa----------------------------- $roadLat , $roadLng');
+          print('Distance to nearest main road: $distanceMainRoad');
+          print(
+              'Distance to nearest main road: ${distanceInMeter.toStringAsFixed(2)} meters');
+        } else {
+          print(
+              'Error: Unable to calculate distance, lat/long values are missing.');
+        }
+      } else {
+        print('No roads found nearby.');
+      }
+    } else {
+      print('Failed to get nearest road: ${response.statusCode}');
+    }
+  }
+
+  Future<String> getAddressFromLatLng(double latitude, double longitude) async {
+    try {
+      // Get the list of placemarks from the coordinates
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(latitude, longitude);
+
+      // Get the first placemark (usually the most accurate)
+      Placemark place = placemarks[0];
+
+      // Return a more structured format similar to Google Maps
+      // Example: "Place Name, Locality, City, Country"
+      return "${place.name}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+    } catch (e) {
+      print(e);
+      return "Address not found"; // Return null if there's an error
+    }
+  }
+
+  Future<void> checkNearest() async {
+    Position userLocation = await getCurrentLocation();
+
+    // Get nearest road
+    await getNearestRoad(originlat, originlong);
+    print('srfgswrgwr $originlat , $originlong');
+
+    // // Find nearby public terminals
+    // await findNearbyTerminals(userLocation.latitude, userLocation.longitude);
+  }
+
+  Future<Position> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location service are disabled');
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permission is denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request');
+    }
+
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+  }
+
+  //Methods for adding steps to the route.
+  late bool tricycle = false;
+  Future<void> addStep() async {
+    if (distanceInMeter < 200 ||
+        (distanceInMeter >= 200 && tricycle == false)) {
+      // walk == true
+      LatLng endwalk = LatLng(double.parse(roadLat), double.parse(roadLng));
+      String endwalkAddress = await getAddressFromLatLng(
+          double.parse(roadLat), double.parse(roadLng));
+      walkStep('Walk to $endwalkAddress', endwalk);
+
+      for (var s in steps) {
+        print('${s}eyyyyyyyyyyyyy');
+      }
+
+      print(
+          'end walk------------------ $endwalk and $endwalkAddress ------------=====================');
+    } else if (distanceInMeter >= 200 && tricycle == true) {
+      //walk = false
+      print('noooooooooooooooooooooooo');
+    }
+  }
+
+  //Additional route fetching and decoding methods.
+
+  Future<void> fetchRoute() async {
+    final String url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${widget.latOrigin},${widget.longOrigin}&destination=${widget.latDestination}&key=$apiKey&alternatives=true';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final routes = jsonResponse['routes'];
+
+        if (routes.isNotEmpty) {
+          final route = routes[0]; // Use the first route
+          final polyline = route['overview_polyline']['points'];
+
+          setState(() {
+            // Decode the polyline into a list of LatLng points
+            polylineCoordinates = decodePolyline(polyline);
+
+            // Clear existing markers and polylines
+
+            _polylines.clear();
+
+            setState(() {
+              _polylines.add(
+                Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: polylineCoordinates,
+                  color: Colors.blue,
+                  width: 5,
+                ),
+              );
+            });
+            // Add polyline to the map
+
+            // Add start and end markers
+            if (polylineCoordinates.isNotEmpty) {
+              final LatLng startLocation = polylineCoordinates.first;
+              final LatLng endLocation = polylineCoordinates.last;
+
+              setState(() {
+                // _markers.add(
+                //   Marker(
+                //     markerId: const MarkerId('start_marker'),
+                //     position: startLocation,
+                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
+                //     infoWindow: const InfoWindow(title: 'Start Location'),
+                //   ),
+                // );
+
+                // _markers.add(
+                //   Marker(
+                //     markerId: const MarkerId('end_marker'),
+                //     position: endLocation,
+                //     icon: customIcon ?? BitmapDescriptor.defaultMarker,
+                //     infoWindow: const InfoWindow(title: 'End Location'),
+                //   ),
+                // );
+              });
+            }
+          });
+        } else {
+          print("No routes found.");
+        }
+      } else {
+        print("Failed to fetch route. Status code: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (e) {
+      print("Error fetching route: $e");
+    }
+  }
+
+  List<LatLng> decodePolyline(String polyline) {
+    List<LatLng> coordinates = [];
+    int index = 0;
+    int len = polyline.length;
+    int lat = 0;
+    int lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = polyline.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int deltaLat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += deltaLat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = polyline.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int deltaLng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += deltaLng;
+
+      coordinates.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+
+    return coordinates;
+  }
+
+  List<LatLng> decodePolylines(String encoded) {
+    List<LatLng> points = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int shift = 0, result = 0;
+      int b;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1F) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1F) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      points.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+    return points;
+  }
+
+  //Helper functions, such as parseDouble or any additional utility functions.
+  double parseDouble(String value) {
+    try {
+      return double.parse(value);
+    } catch (e) {
+      print('Error parsing double: $e');
+      // Return a default value or handle the error as needed
+      return 0.0;
+    }
+  }
+
+  late LatLng originLocation;
+  late LatLng destinationLocation;
+
+  // In initState
+  initData() async {
+    // Step 1: Find Nearby Routes
+    await findNearbyRoutes(originLocation);
+    if (nearbyRoutes.isNotEmpty) {
+      List<RouteSuggest> routesTerminal = await fetchRoutesFromAPI();
+      neabyRoutesEnd(destinationLocation);
+// Find and store transfer points
+      List<TransferPoint> transferPoints =
+          findTransferPoints(nearbyRoutes, routesTerminal);
+
+      // Correct call:
+      findConnectedTransferPaths(
+          nearbyRoutes, routesTerminal, destinationLocation);
+    } else {
+      print("No nearby routes found after initialization.");
+    }
+
+    // Step 2: Get Nearest Terminals after routes
+    final nearestTerminals = await getNearestTerminals(originLocation);
+    if (nearestTerminals.isNotEmpty) {
+      nearbyTerminalsEnd(destinationLocation, nearestTerminals);
+      // Optionally: findConnectingTerminals(destinationLocation, nearestTerminals);
+    } else {
+      print("No nearby terminals found after initialization.");
+    }
+  }
+
+  // INITSTATE
+  @override
+  void initState() {
+    super.initState();
+    _controllerTo.text = widget.originName;
+    _controllerFrom.text = widget.destinationName;
+
+    originlat = double.parse(widget.latOrigin);
+    originlong = double.parse(widget.longOrigin);
+    destinationlat = double.parse(widget.latDestination);
+    destinationlong = double.parse(widget.longDestination);
+
+    originLocation = LatLng(
+      double.parse(widget.latOrigin),
+      double.parse(widget.longOrigin),
+    );
+
+    destinationLocation = LatLng(
+      double.parse(widget.latDestination),
+      double.parse(widget.longDestination),
+    );
+
+    loadRoutes();
+
+    // Fetch routes and terminals
+    fetchAndPrintRoutes(); //debugging
+    fetchRoute();
+
+    // // Fetch nearby routes and terminals, then find transfer options
+    // Future.wait([
+    //   findNearbyRoutes(originLocation).then((_) {
+    //     if (nearbyRoutes.isNotEmpty) {
+    //       neabyRoutesEnd(destinationLocation);
+    //       findTransferOptionsFromPointB(originLocation, allRoutes);
+    //     } else {
+    //       print("No nearby routes found after initialization.");
+    //     }
+    //   }),
+    //   getNearestTerminals(originLocation).then((nearestTerminals) {
+    //     if (nearestTerminals.isNotEmpty) {
+    //       nearbyTerminalsEnd(destinationLocation, nearestTerminals);
+    //       //findConnectingTerminals(destinationLocation, nearestTerminals);
+    //     } else {
+    //       print("No nearby terminals found after initialization.");
+    //     }
+    //   }),
+    // ]);
+    setState(() {});
+
+    initData();
+
+    //TESt - ongoing
+    //testFetchRouteCoordinates();
+
+    //TESt
+    checkNearest().then((_) {
+      addStep();
+    });
+    //gps
+    getCurrentLocation().then(
+      (value) {
+        lat = '${value.latitude}';
+        long = '${value.longitude}';
+        setState(() {
+          print('Latitude: $lat, Longtitude: $long');
+          markers.add(Marker(
+            markerId: const MarkerId('current_location'),
+            position: LatLng(value.latitude, value.longitude),
+            infoWindow: const InfoWindow(title: 'Current Location'),
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          ));
+        });
+        // liveLocation();
+      },
+    );
+
+    _setCustomMarkerIcon();
+    getRoutes();
+  }
+
+  //Widget builder methods for the main app layout and text fields.
   @override
   Widget build(BuildContext context) {
-    //DONE---------------------------------------
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
@@ -1156,9 +1403,7 @@ class testState extends State<Test> {
     );
   }
 
-  //next from textformfield
   Widget fromTextFormfield(TextEditingController control) {
-    //DONE--------------------------------------------
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1192,7 +1437,6 @@ class testState extends State<Test> {
 
   //next to textformfield
   Widget toTextFormfield(TextEditingController control) {
-    //DONE-------------------------------------------------------
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1224,20 +1468,7 @@ class testState extends State<Test> {
     );
   }
 
-  double parseDouble(String value) {
-    //DONE---------------------------
-    try {
-      return double.parse(value);
-    } catch (e) {
-      print('Error parsing double: $e');
-      // Return a default value or handle the error as needed
-      return 0.0;
-    }
-  }
-
-  //next map
   Widget buildMap() {
-    //DONE---------------------------
     double lat;
     double lng;
 
@@ -1272,15 +1503,8 @@ class testState extends State<Test> {
     );
   }
 
-  //next routes
-  //transponames, Fare, time, pic
-  Widget suggestRoute(
-      String transpoNames,
-      String fare,
-      String time, //DONE-------------------------------------------
-      SvgPicture pic,
-      List<dynamic> legs,
-      List<dynamic> steps) {
+  Widget suggestRoute(String transpoNames, String fare, String time,
+      SvgPicture pic, List<dynamic> legs, List<dynamic> steps) {
     return InkWell(
       onTap: () {
         setState(() {
@@ -1295,7 +1519,7 @@ class testState extends State<Test> {
                   longOrigin: widget.latOrigin,
                   latDestination: widget.latDestination,
                   longDestination: widget.longDestination,
-                  legs: legs,
+                  // legs: legs,
                   steps: steps,
                   origin: _controllerTo.text,
                   destination: _controllerFrom.text)),
@@ -1346,25 +1570,25 @@ class testState extends State<Test> {
                     ),
 
                     //route
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.only(
-                              right: 8.0), // Space between the two texts
-                          child: const Text(
-                            "Fare:",
-                            style: TextStyle(color: Colors.black),
-                            textAlign:
-                                TextAlign.start, // Align text to the start
-                          ),
-                        ),
-                        Text(
-                          fare,
-                          style: const TextStyle(color: Colors.black),
-                          textAlign: TextAlign.start, // Align text to the start
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: [
+                    //     Container(
+                    //       padding: const EdgeInsets.only(
+                    //           right: 8.0), // Space between the two texts
+                    //       child: const Text(
+                    //         "Fare:",
+                    //         style: TextStyle(color: Colors.black),
+                    //         textAlign:
+                    //             TextAlign.start, // Align text to the start
+                    //       ),
+                    //     ),
+                    //     Text(
+                    //       fare,
+                    //       style: const TextStyle(color: Colors.black),
+                    //       textAlign: TextAlign.start, // Align text to the start
+                    //     ),
+                    //   ],
+                    // ),
                     Row(
                       children: [
                         Container(

@@ -181,10 +181,12 @@ class _MyWidgetState extends State<MainRoutefinder2> {
         LatLng pointA = routeSuggest.pointA;
         LatLng pointB = routeSuggest.pointB;
         List<LatLng> waypoints = routeSuggest.waypoints;
+        int terminalID = routeSuggest.terminalID;
+        int transportationID = routeSuggest.transportationID;
 
         // Debugging: Print parsed franchise ID, pointA, pointB, and waypoints
         print(
-            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints");
+            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID");
 
         // Fetch the route coordinates using Google Directions API, including waypoints
         List<LatLng> routeCoordinates =
@@ -208,7 +210,9 @@ class _MyWidgetState extends State<MainRoutefinder2> {
           pointA: pointA,
           pointB: pointB,
           routeCoordinates: routeCoordinates,
-          waypoints: waypoints, // Include waypoints in the return
+          waypoints: waypoints,
+          terminalID: terminalID,
+          transportationID: transportationID, // Include waypoints in the return
         );
       }).toList());
 
@@ -476,6 +480,7 @@ class _MyWidgetState extends State<MainRoutefinder2> {
     } else {
       print('No terminals found.');
     }
+    return null;
   }
 
   Future<void> getNearestRoad(double latitude, double longitude) async {
@@ -746,6 +751,7 @@ class _MyWidgetState extends State<MainRoutefinder2> {
   }
 
   // INITSTATE
+  @override
   void initState() {
     super.initState();
     _controllerTo.text = widget.originName;
@@ -771,7 +777,6 @@ class _MyWidgetState extends State<MainRoutefinder2> {
     //routes from db
     fetchAndPrintRoutes();
 
-    //test latlng sample should be palitan ng origin latlng
     // function to get the nearest terminal
     getNearestTerminal(originLocation).then((nearestTerminal) {
       print('Nearest Terminal: ${nearestTerminal?.name}');
@@ -828,6 +833,7 @@ class _MyWidgetState extends State<MainRoutefinder2> {
   }
 
   //Widget builder methods for the main app layout and text fields.
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1182,7 +1188,7 @@ class _MyWidgetState extends State<MainRoutefinder2> {
                   longOrigin: widget.latOrigin,
                   latDestination: widget.latDestination,
                   longDestination: widget.longDestination,
-                  legs: legs,
+                  //legs: legs,
                   steps: steps,
                   origin: _controllerTo.text,
                   destination: _controllerFrom.text)),

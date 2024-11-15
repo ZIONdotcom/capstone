@@ -1,6 +1,6 @@
-import 'package:capstone/pages/dashboard.dart';
 import 'package:capstone/pages/routeFinder.dart';
 import 'package:flutter/material.dart';
+//import 'package:capstone/pages/routeFinderAlgo.dart';
 
 void main() {
   runApp(const MyApp());

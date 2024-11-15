@@ -308,8 +308,7 @@
 // }
 
 // Define your page widgets
-// 
-
+//
 
 // import 'dart:io';
 import 'dart:io';
@@ -319,7 +318,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -332,7 +331,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: ImagePickerButton(),
+      home: const ImagePickerButton(),
     );
   }
 }

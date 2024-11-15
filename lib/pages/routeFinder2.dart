@@ -10,7 +10,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/pages/routefinder3.dart';
 import 'package:capstone/pages/routeCreation.dart';
-import 'dart:math';
 import 'package:capstone/step_model.dart';
 
 class RouteFinder2 extends StatefulWidget {
@@ -44,12 +43,6 @@ class RouteFinder2 extends StatefulWidget {
 //
 
 class _RouteFinderState2 extends State<RouteFinder2> {
-  //map
-  final CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(14.831582, 120.903786), // Default initial position
-    zoom: 11.5, // Default zoom level
-  );
-
   //add step to the list
   List<dynamic> steps = [];
   //if there is a tricycle
@@ -76,71 +69,71 @@ class _RouteFinderState2 extends State<RouteFinder2> {
     ));
   }
 
-  //distance walk math
-  late double distanceMainRoad;
-  late double distanceInMeter = 0.0;
-  double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371; // Radius of the Earth in kilometers
-    final dLat = _degreesToRadians(lat2 - lat1);
-    final dLon = _degreesToRadians(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degreesToRadians(lat1)) *
-            cos(_degreesToRadians(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c; // Distance in kilometers
-  }
+  // //distance walk math
+  // late double distanceMainRoad;
+  // late double distanceInMeter = 0.0;
+  // double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+  //   const R = 6371; // Radius of the Earth in kilometers
+  //   final dLat = _degreesToRadians(lat2 - lat1);
+  //   final dLon = _degreesToRadians(lon2 - lon1);
+  //   final a = sin(dLat / 2) * sin(dLat / 2) +
+  //       cos(_degreesToRadians(lat1)) *
+  //           cos(_degreesToRadians(lat2)) *
+  //           sin(dLon / 2) *
+  //           sin(dLon / 2);
+  //   final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  //   return R * c; // Distance in kilometers
+  // }
 
-  double _degreesToRadians(double degrees) {
-    return degrees * pi / 180;
-  }
+  // double _degreesToRadians(double degrees) {
+  //   return degrees * pi / 180;
+  // }
 
   //roads
-  late String roadLat;
-  late String roadLng;
-  // Function to get nearest road using Google Maps Roads API
-  Future<void> getNearestRoad(double latitude, double longitude) async {
-    final String url =
-        'https://roads.googleapis.com/v1/snapToRoads?path=$latitude,$longitude&key=$apiKey';
+  // late String roadLat;
+  // late String roadLng;
+  // // Function to get nearest road using Google Maps Roads API
+  // Future<void> getNearestRoad(double latitude, double longitude) async {
+  //   final String url =
+  //       'https://roads.googleapis.com/v1/snapToRoads?path=$latitude,$longitude&key=$apiKey';
 
-    final response = await http.get(Uri.parse(url));
+  //   final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      // Handle the response data
-      if (data['snappedPoints'].isNotEmpty) {
-        var nearestRoad = data['snappedPoints'][0];
-        roadLat = nearestRoad['location']['latitude'].toString();
-        roadLng = nearestRoad['location']['longitude'].toString();
-        print('Nearest Road: ${nearestRoad['location']}');
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body);
+  //     // Handle the response data
+  //     if (data['snappedPoints'].isNotEmpty) {
+  //       var nearestRoad = data['snappedPoints'][0];
+  //       roadLat = nearestRoad['location']['latitude'].toString();
+  //       roadLng = nearestRoad['location']['longitude'].toString();
+  //       print('Nearest Road: ${nearestRoad['location']}');
 
-        // Now calculate the distance once the roadLat and roadLng are available
-        if (lat.isNotEmpty && long.isNotEmpty) {
-          double distanceMainRoad = haversineDistance(
-            double.parse(lat),
-            double.parse(long),
-            double.parse(roadLat),
-            double.parse(roadLng),
-          );
-          distanceInMeter = distanceMainRoad * 1000;
+  //       // Now calculate the distance once the roadLat and roadLng are available
+  //       if (lat.isNotEmpty && long.isNotEmpty) {
+  //         double distanceMainRoad = haversineDistance(
+  //           double.parse(lat),
+  //           double.parse(long),
+  //           double.parse(roadLat),
+  //           double.parse(roadLng),
+  //         );
+  //         distanceInMeter = distanceMainRoad * 1000;
 
-          print(
-              'haaaaaaaaaaaaaaaaaaaaaaaaaaa----------------------------- $roadLat , $roadLng');
-          print('Distance to nearest main road: $distanceMainRoad');
-          print(
-              'Distance to nearest main road: ${distanceInMeter.toStringAsFixed(2)} meters');
-        } else {
-          print(
-              'Error: Unable to calculate distance, lat/long values are missing.');
-        }
-      } else {
-        print('No roads found nearby.');
-      }
-    } else {
-      print('Failed to get nearest road: ${response.statusCode}');
-    }
-  }
+  //         print(
+  //             'haaaaaaaaaaaaaaaaaaaaaaaaaaa----------------------------- $roadLat , $roadLng');
+  //         print('Distance to nearest main road: $distanceMainRoad');
+  //         print(
+  //             'Distance to nearest main road: ${distanceInMeter.toStringAsFixed(2)} meters');
+  //       } else {
+  //         print(
+  //             'Error: Unable to calculate distance, lat/long values are missing.');
+  //       }
+  //     } else {
+  //       print('No roads found nearby.');
+  //     }
+  //   } else {
+  //     print('Failed to get nearest road: ${response.statusCode}');
+  //   }
+  // }
 
   late double originlat;
   late double originlong;
@@ -149,21 +142,21 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   late double origin;
   late double destination;
 // Main function to check nearest road and terminals
-  Future<void> checkNearest() async {
-    Position userLocation = await getCurrentLocation();
+  // Future<void> checkNearest() async {
+  //   Position userLocation = await getCurrentLocation();
 
-    originlat = double.parse(widget.latOrigin);
-    originlong = double.parse(widget.longOrigin);
-    destinationlat = double.parse(widget.latDestination);
-    destinationlong = double.parse(widget.longDestination);
+  //   originlat = double.parse(widget.latOrigin);
+  //   originlong = double.parse(widget.longOrigin);
+  //   destinationlat = double.parse(widget.latDestination);
+  //   destinationlong = double.parse(widget.longDestination);
 
-    // Get nearest road
-    await getNearestRoad(originlat, originlong);
-    print('srfgswrgwr $originlat , $originlong');
+  //   // Get nearest road
+  //   //await getNearestRoad(originlat, originlong);
+  //   print('srfgswrgwr $originlat , $originlong');
 
-    // // Find nearby public terminals
-    // await findNearbyTerminals(userLocation.latitude, userLocation.longitude);
-  }
+  //   // // Find nearby public terminals
+  //   // await findNearbyTerminals(userLocation.latitude, userLocation.longitude);
+  // }
 
   //gps
   late String lat;
@@ -248,26 +241,26 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   //   });
   // }
   // add step list
-  Future<void> addStep() async {
-    if (distanceInMeter < 200 ||
-        (distanceInMeter >= 200 && tricycle == false)) {
-      // walk == true
-      LatLng endwalk = LatLng(double.parse(roadLat), double.parse(roadLng));
-      String endwalkAddress = await getAddressFromLatLng(
-          double.parse(roadLat), double.parse(roadLng));
-      walkStep('Walk to $endwalkAddress', endwalk);
+  // Future<void> addStep() async {
+  //   if (distanceInMeter < 200 ||
+  //       (distanceInMeter >= 200 && tricycle == false)) {
+  //     // walk == true
+  //     LatLng endwalk = LatLng(double.parse(roadLat), double.parse(roadLng));
+  //     String endwalkAddress = await getAddressFromLatLng(
+  //         double.parse(roadLat), double.parse(roadLng));
+  //     walkStep('Walk to $endwalkAddress', endwalk);
 
-      for (var s in steps) {
-        print('${s}eyyyyyyyyyyyyy'); // This will now print meaningful details
-      }
+  //     for (var s in steps) {
+  //       print('${s}eyyyyyyyyyyyyy'); // This will now print meaningful details
+  //     }
 
-      print(
-          'end walk------------------ $endwalk and $endwalkAddress ------------=====================');
-    } else if (distanceInMeter >= 200 && tricycle == true) {
-      //walk = false
-      print('noooooooooooooooooooooooo');
-    }
-  }
+  //     print(
+  //         'end walk------------------ $endwalk and $endwalkAddress ------------=====================');
+  //   } else if (distanceInMeter >= 200 && tricycle == true) {
+  //     //walk = false
+  //     print('noooooooooooooooooooooooo');
+  //   }
+  // }
 
   @override
   void initState() {
@@ -299,9 +292,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
 
     _setCustomMarkerIcon();
 
-    checkNearest().then((_) {
-      addStep();
-    });
+    // checkNearest().then((_) {
+    //   //addStep();
+    // });
   }
 
   // marker icon
@@ -421,30 +414,21 @@ class _RouteFinderState2 extends State<RouteFinder2> {
     return coordinates;
   }
 
-  //polyline
-
-  //transportation suggestion transit
-  // Fetch public transport routes from the API
+  // RouteFinder || Fetch public transport routes from the API (Google Transit)
   Future<List<Map<String, dynamic>>> fetchPublicTransportRoutes(
       String origin, String destination, String apiKey) async {
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&mode=transit&alternatives=true&key=$apiKey';
-
-    print('Fetching URL: $url');
-
     try {
       final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-
-        // Print the entire API response for debugging purposes
+        //debugging
         print("API Response: ${data.toString()}");
 
         if (data['status'] == 'OK') {
           List routes = data['routes'];
 
-          // Check if routes are available
           if (routes.isEmpty) {
             print("No transit routes found.");
             return [];
@@ -482,15 +466,9 @@ class _RouteFinderState2 extends State<RouteFinder2> {
   //latlng to human readable address
   Future<String> getAddressFromLatLng(double latitude, double longitude) async {
     try {
-      // Get the list of placemarks from the coordinates
       List<Placemark> placemarks =
           await placemarkFromCoordinates(latitude, longitude);
-
-      // Get the first placemark (usually the most accurate)
       Placemark place = placemarks[0];
-
-      // Return a more structured format similar to Google Maps
-      // Example: "Place Name, Locality, City, Country"
       return "${place.name}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
     } catch (e) {
       print(e);
@@ -498,43 +476,30 @@ class _RouteFinderState2 extends State<RouteFinder2> {
     }
   }
 
-  // Call this method to get the routes and update the UI
-  // Call this method to get the routes and print the details in the terminal
+  // RouteFinder || get the routes and check the details in the terminal
   void getRoutes() async {
     try {
-      print(
-          'Fetching routes....................................................................................||||||||||||||||||||||||||||');
       String from = _controllerFrom.text;
       String to = _controllerTo.text;
-
       if (from.isEmpty || to.isEmpty) {
         print('Please enter both origin and destination.');
-        return; // Exit if either is empty
+        return; // Exit if empty
       }
-      print('From: $from, To: $to'); // Log the values for debugging
-
+      print('From: $from, To: $to'); // debugging
       if (from == 'Your Location') {
-        // Fetch current location and use latitude/longitude as origin
         Position currentPosition = await getCurrentLocation();
-        // Get the human-readable address
         from = await getAddressFromLatLng(
             currentPosition.latitude, currentPosition.longitude);
-        //from = '${currentPosition.latitude},${currentPosition.longitude}';
         print('Using current location as origin: $from');
       }
-
       publicTransportRoutes = await fetchPublicTransportRoutes(
-        from, // Origin
-        to, // Destination
+        from,
+        to,
         apiKey,
       );
-
-      print('routess !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! $from, $to');
-
       for (int i = 0; i < publicTransportRoutes.length; i++) {
         final route = publicTransportRoutes[i];
         final legs = route['legs'];
-
         print('Route $i:');
         for (int j = 0; j < legs.length; j++) {
           final leg = legs[j];
@@ -543,7 +508,6 @@ class _RouteFinderState2 extends State<RouteFinder2> {
           print('    End Address: ${leg['end_address']}');
           print('    Duration: ${leg['duration']['text']}');
           print('    Distance: ${leg['distance']['text']}');
-
           for (int k = 0; k < leg['steps'].length; k++) {
             final step = leg['steps'][k];
             print('    Step $k:');
@@ -563,8 +527,6 @@ class _RouteFinderState2 extends State<RouteFinder2> {
           }
         }
       }
-
-      setState(() {}); // Update the UI with the new routes
     } catch (e) {
       print('Error fetching routes: $e');
     }
@@ -668,7 +630,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
             ),
             //transit
 
-//List of suggested route
+//RouteFinder || Display List of suggested route from Google API
             if (_controllerFrom.text.isNotEmpty &&
                 _controllerTo.text.isNotEmpty)
               Expanded(
@@ -676,10 +638,8 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                   padding: EdgeInsets.zero,
                   itemCount: publicTransportRoutes.length +
                       1, // Add 1 for suggestion button
-
                   itemBuilder: (context, index) {
                     if (index == publicTransportRoutes.length) {
-                      // suggest button
                       return Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Container(
@@ -748,17 +708,12 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                         ),
                       );
                     }
-
-                    // Handle route items
                     final route = publicTransportRoutes[index];
                     final legs = route['legs'];
-
                     String transportNames = '';
                     String totalDuration = '';
-
                     for (var leg in legs) {
                       for (var step in leg['steps']) {
-                        // Check if the step is a transit step
                         if (step['travel_mode'] == 'TRANSIT') {
                           final transitDetails = step['transit_details'];
                           if (transitDetails != null &&
@@ -771,8 +726,6 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                             transportNames += 'Unknown Transit - ';
                           }
                         }
-
-                        // Check if the step is a walking step
                         if (step['travel_mode'] == 'WALKING') {
                           final duration = step['duration'] != null
                               ? step['duration']['text'] ?? 'Unknown Duration'
@@ -780,20 +733,14 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                           transportNames += 'Walk - ';
                         }
                       }
-
-                      // Set the total duration for the leg
                       totalDuration = leg['duration'] != null
                           ? leg['duration']['text'] ?? 'Unknown Time'
                           : 'Unknown Time';
                     }
-
-                    // Remove the trailing " - " from transportNames
                     if (transportNames.endsWith(' - ')) {
                       transportNames = transportNames.substring(
                           0, transportNames.length - 3);
                     }
-
-                    // Customize this part based on your data structure
                     return suggestRoute(
                       transportNames,
                       '₱50.00',
@@ -922,8 +869,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
     );
   }
 
-  //next routes
-  //transponames, Fare, time, pic
+  //RouteFinder || UI in displaying the Routes from Google API, Passing of step data to another dart File for displaying
   Widget suggestRoute(String transpoNames, String fare, String time,
       SvgPicture pic, List<dynamic> legs, List<dynamic> steps) {
     return InkWell(
@@ -940,7 +886,7 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                   longOrigin: widget.latOrigin,
                   latDestination: widget.latDestination,
                   longDestination: widget.longDestination,
-                  legs: legs,
+                  //legs: legs,
                   steps: steps,
                   origin: _controllerTo.text,
                   destination: _controllerFrom.text)),
@@ -991,25 +937,25 @@ class _RouteFinderState2 extends State<RouteFinder2> {
                     ),
 
                     //route
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.only(
-                              right: 8.0), // Space between the two texts
-                          child: const Text(
-                            "Fare:",
-                            style: TextStyle(color: Colors.black),
-                            textAlign:
-                                TextAlign.start, // Align text to the start
-                          ),
-                        ),
-                        Text(
-                          fare,
-                          style: const TextStyle(color: Colors.black),
-                          textAlign: TextAlign.start, // Align text to the start
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: [
+                    //     Container(
+                    //       padding: const EdgeInsets.only(
+                    //           right: 8.0), // Space between the two texts
+                    //       child: const Text(
+                    //         "Fare:",
+                    //         style: TextStyle(color: Colors.black),
+                    //         textAlign:
+                    //             TextAlign.start, // Align text to the start
+                    //       ),
+                    //     ),
+                    //     Text(
+                    //       fare,
+                    //       style: const TextStyle(color: Colors.black),
+                    //       textAlign: TextAlign.start, // Align text to the start
+                    //     ),
+                    //   ],
+                    // ),
                     Row(
                       children: [
                         Container(
