@@ -14,6 +14,8 @@ class RouteCreationDraft extends StatefulWidget {
 class _MyWidgetState extends State<RouteCreationDraft> with SingleTickerProviderStateMixin {
   List <dynamic> data = [];
   List <Widget> pages = [const Page1()];
+  final Set<Marker> markers = {};
+  final Set<Marker> origin_marker = {};
   // StoresheetSizes storesheetSizes = StoresheetSizes();
   GoogleMapController? mapController;
   Marker? originMarker;
@@ -138,26 +140,26 @@ class _MyWidgetState extends State<RouteCreationDraft> with SingleTickerProvider
     }
   }
 
-  void _gotoPreviousPage(){
-    if(currentPageTracker > 1){
-      setState(() {
-        currentPageTracker--;
-        if(currentPageTracker <= 1){
-        showBackIcon = false;
-        }
-      }); 
-    }
-  }
-  void _gotoNextPage(){
-    if(currentPageTracker < pages.length){
-      setState(() {
-        currentPageTracker++;
-        if(currentPageTracker == pages.length){
-        showNextIcon = false;
-        }
-      }); 
-    }
-  }
+  // void _gotoPreviousPage(){
+  //   if(currentPageTracker > 1){
+  //     setState(() {
+  //       currentPageTracker--;
+  //       if(currentPageTracker <= 1){
+  //       showBackIcon = false;
+  //       }
+  //     }); 
+  //   }
+  // }
+  // void _gotoNextPage(){
+  //   if(currentPageTracker < pages.length){
+  //     setState(() {
+  //       currentPageTracker++;
+  //       if(currentPageTracker == pages.length){
+  //       showNextIcon = false;
+  //       }
+  //     }); 
+  //   }
+  // }
   void _newPage(String pagename){
     if(pagename == ' walk'){
       pages.add(const WalkWidget());
@@ -184,174 +186,115 @@ class _MyWidgetState extends State<RouteCreationDraft> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text(
-          'Create a route',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Colors.white,
+      title: const Text(
+        'Create a route',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
-
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: mapClicked ? 630 : double.infinity, // Map height
-                  width: double.infinity, // Full width of screen
-                  child: GoogleMap(
-                    onMapCreated: _onMapCreated,
-                    initialCameraPosition: CameraPosition(
-                      target: _initialCameraPosition,
-                      zoom: 12.0,
-                    ),
-                    markers: {..._originMarker,..._markers},
-                    polylines: _polylines,
-                    onTap: (LatLng pinnedLocation) {
-                      if(pinnedLocations.isEmpty){
-                        _addOrigin(pinnedLocation);
-                        print('tap');
-                              
-                      }
-                      else{
-                        _addMarkerIcon(pinnedLocation);
-                      }
-                      mapClicked = true;
-                    },
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              SizedBox(
+                height: mapClicked ? 630 : double.infinity, // Map height
+                width: double.infinity, // Full width of screen
+                child: GoogleMap(
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(
+                    target: _initialCameraPosition,
+                    zoom: 12.0,
                   ),
+                  markers: {..._originMarker, ..._markers},
+                  polylines: _polylines,
+                  onTap: (LatLng pinnedLocation) {
+                    if (pinnedLocations.isEmpty) {
+                      _addOrigin(pinnedLocation);
+                      print('tap'); 
+                    } else {
+                      _addMarkerIcon(pinnedLocation);
+                    }
+                    setState(() {
+                      mapClicked = true;
+                    });
+                  },
                 ),
-                if (mapClicked)
-                  DraggableScrollableSheet(
-                   // key: SheetSizeKey,
-                    initialChildSize: sheetSizes[0],
-                    minChildSize: sheetSizes[1],
-                    maxChildSize: sheetSizes[2],
-                    builder: (context, scrollController) {
-                      return ClipRRect(
-                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20.0),
-                          topRight: Radius.circular(20.0),
+              ),
+              if (mapClicked)
+                DraggableScrollableSheet(
+                  initialChildSize: sheetSizes[0],
+                  minChildSize: sheetSizes[1],
+                  maxChildSize: sheetSizes[2],
+                  builder: (context, scrollController) {
+                    return ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20.0),
+                        topRight: Radius.circular(20.0),
+                      ),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 10.0,
+                            ),
+                          ],
                         ),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 10.0,
-                              ),
-                            ],
-                          ),
+                        child: SingleChildScrollView(
+                          controller: scrollController,
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
+
                                   IconButton(
-                                    onPressed: (){
-
-                                    }, 
-                                    icon: const Icon(Icons.arrow_back,size: 24)
-                                    ),
-                                    IconButton(
-                                    onPressed: (){
-
-                                    }, 
-                                    icon: const Icon(Icons.arrow_forward,size: 24)
-                                    )
+                                    onPressed: () {},
+                                    icon: const Icon(Icons.arrow_back, size: 24),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {},
+                                    icon: const Icon(Icons.arrow_forward, size: 24),
+                                  ),
                                 ],
                               ),
-                              pages[currentPageTracker],
+                           
+                              SizedBox(
+                                height: 300, 
+                                child: pages[currentPageTracker],
+                              ),
                             ],
-                          )
-                          // child: Navigator(
-                          //   onGenerateRoute: (RouteSettings settings){
-                          //     Widget page = Page1(scrollController);
-                          //     //final args = settings.arguments as Map<int,List>;
-                          //     //steps = args;
-                          //     switch(settings.name){
-                          //       case '/walk':
-                          //         page = WalkWidget(scrollController: scrollController,
-                          //         onSubmit: (String x){
-
-                          //         },
-                          //         onPop: (){
-                          //           WidgetsBinding.instance.addPostFrameCallback((_){
-                          //             setState(() {
-                          //             sheetSizes[0] = 0.35;
-                          //             sheetSizes[1] = 0.1;
-                          //             sheetSizes[2] = 0.35;
-                          //           });
-                          //           });
-                                    
-                          //         });
-                          //         WidgetsBinding.instance.addPostFrameCallback((_){
-                          //             setState(() {
-                          //               sheetSizes[0] = 0.40;
-                          //               sheetSizes[1] = 0.1;
-                          //               sheetSizes[2] = 0.40;
-                          //             });
-                          //           });
-                                  
-                          //         break;
-                          //         case '/ride':
-                          //           page = RideWidget(scrollController: scrollController);
-                          //           WidgetsBinding.instance.addPostFrameCallback((_){
-                          //                 setState(() {
-                          //                   sheetSizes[0] = 0.70;
-                          //                   sheetSizes[1] = 0.1;
-                          //                   sheetSizes[2] = 0.70;
-                          //                 });
-                          //               });
-                          //           break;
-
-
-                          //     }
-                          //     return PageRouteBuilder(
-                          //     pageBuilder: (context, animation, secondaryAnimation) =>
-                          //         page,
-                          //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                          //       const begin = Offset(1.0, 0.0); // Wipe in from right
-                          //       const end = Offset.zero;
-                          //       const curve = Curves.ease;
-                        
-                          //       var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                          //       var offsetAnimation = animation.drive(tween);
-                        
-                          //       return SlideTransition(
-                          //         position: offsetAnimation,
-                          //         child: child,
-                          //       );
-                          //     },
-                          //   );
-                          //   },
-                          // ),
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                Positioned(
-                  top: 20,
-                  right: 20,
-                  child: FloatingActionButton(
-                    onPressed: _focusOnLastPinnedLocation,
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.location_searching_rounded),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              Positioned(
+                top: 20,
+                right: 20,
+                child: FloatingActionButton(
+                  onPressed: _focusOnLastPinnedLocation,
+                  backgroundColor: Colors.white,
+                  child: const Icon(Icons.location_searching_rounded),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
   void _showDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -623,7 +566,7 @@ class _WalkWidgetState extends State<WalkWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        controller:scrollController, // Accessing widget properties
+        controller:scrollController, 
         child: Padding(
           padding: const EdgeInsets.all(5.0),
           child: Column(
@@ -1108,6 +1051,19 @@ class _RideWidgetState extends State<RideWidget> {
 
 
 class DataManager{
+  final Set<Marker> markers = {};
+  final Set<Marker> origin_marker = {};
+  static final DataManager _instance = DataManager._internal();
+
+  factory DataManager(){
+    return _instance;
+  }
+  DataManager._internal();
+
+  Set<Marker> getOrigin_Marker(){
+    return origin_marker;
+  }
   
 }
+
 

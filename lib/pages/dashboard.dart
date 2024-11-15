@@ -1,10 +1,11 @@
+import 'package:capstone/pages/routeCreation.dart';
 import 'package:capstone/pages/suggestPinLocation.dart';
 import 'package:flutter/material.dart';
-import 'routeCreation.dart';
 import 'package:capstone/pages/routeFinder.dart';
 import 'package:capstone/pages/travelPlan.dart';
 import 'package:capstone/pages/commutingGuide.dart';
 import 'package:capstone/pages/popularRoutes.dart';
+import 'package:capstone/pages/mapPage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -196,7 +197,7 @@ class _DashboardState extends State<Dashboard> {
                          Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CommutingGuide(),
+                            builder: (context) => LocationMapPage(),
                           ),
                         );
                       },

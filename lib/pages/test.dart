@@ -512,8 +512,8 @@ class testState extends State<Test> {
   //TEST
   Future<void> testFetchRouteCoordinates() async {
     // Sample points for testing (Guiguinto, Malolos) - ongoing
-    LatLng pointA = LatLng(14.794754, 120.876076); // Guiguinto
-    LatLng pointB = LatLng(14.82812, 120.884323); // Malolos
+    LatLng pointA = const LatLng(14.794754, 120.876076); // Guiguinto
+    LatLng pointB = const LatLng(14.82812, 120.884323); // Malolos
 
     try {
       // Fetch the route coordinates between pointA and pointB

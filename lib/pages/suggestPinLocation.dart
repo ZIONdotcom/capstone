@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:capstone/pages/scratch.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:capstone/pages/searchpage.dart';
 
 class SuggestPinLocation extends StatefulWidget {
   const SuggestPinLocation({super.key});
@@ -25,11 +23,13 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
   Marker? _pinnedMarker;
   String? _address;
   String? selectedMode;
+  String selectedLocation = 'Search location';
 
   final bool _showEstablishment = false;
   bool _showOptions = false; // To control visibility of widgets
   bool buttonClicked = false;
   List<double> sheetSizes = [0.25,0.1,0.25];
+  
 
 
   @override
@@ -68,7 +68,6 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
 
     //Fetch the address from coordinates
     await _getAddress(position);
-
     if (_address != null && _address!.isNotEmpty) {
       LocationInformation().setLatLng(position, _address!);
     } else {
@@ -91,7 +90,6 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
         setState(() {
           _address = '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
         });
-       
       }
     } catch (e) {
       print('Failed to get address: $e');
@@ -137,13 +135,6 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
         );
       },
     );
-    // TransitionBuilder:  (context, animation, secondaryAnimation, child){
-    //   return FadeTransition(
-    //     opacity: animation,
-    //     child: child,
-    //   );
-    // },
-    // transitionDuration
 }
 
 
@@ -165,9 +156,8 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
       ),
       body: Stack(
         children: [
-          
           SizedBox(
-            height: _showOptions ? 630 : double.infinity, // Map height
+            height: _showOptions ? 630 : double.infinity, 
             width: double.infinity,
             child: GoogleMap(
               myLocationButtonEnabled: false,
@@ -180,6 +170,63 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
               onTap: _addMarker,
             ),
           ),
+          Container(
+            margin: const EdgeInsets.only(top: 2, left: 5, right: 5),
+            padding: const EdgeInsets.only(top: 10, bottom: 3, left: 5),
+            height: 37,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xff1D1617).withOpacity(0.11),
+                  blurRadius: 4,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 20),
+                Expanded(
+                  child: TextFormField(
+                    onTap: () async {
+                      final newInitialPosition = await Navigator.push<Map<String, dynamic>>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchPage(),
+                        ),
+                      );
+
+                    // Update the map's camera position if a location was selected
+                    if (newInitialPosition != null) {
+                      _googleMapController.animateCamera(
+                        CameraUpdate.newLatLng(newInitialPosition['latLng']),
+                      );
+                      setState(() {
+                        selectedLocation = newInitialPosition['name'];
+                      });
+                    }
+                  },
+                  readOnly: true, // Make TextFormField non-editable
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                      hintText: selectedLocation,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+
           
           if (_showOptions)
             DraggableScrollableSheet(
@@ -412,7 +459,7 @@ class _BuildTerminalState extends State<BuildTerminal> {
 }
   Future<void> _pickImages() async {
     final List<XFile> selectedImages = await imagePicker.pickMultiImage();
-    if (selectedImages != null && mounted) {
+    if (mounted) {
       setState(() {
         images = selectedImages; // Update the state with the selected images
       });
@@ -423,7 +470,7 @@ class _BuildTerminalState extends State<BuildTerminal> {
     final XFile? selectedImage = await imagePicker.pickImage(source: ImageSource.camera);
     if (selectedImage != null && mounted) {
       setState(() {
-        images = [selectedImage]; // Update the state with the single image
+        images = [selectedImage]; 
       });
     }
   }
@@ -932,9 +979,9 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
 
   Future<void> _pickImages() async {
     final List<XFile> selectedImages = await imagePicker.pickMultiImage();
-    if (selectedImages != null && mounted) {
+    if (mounted) {
       setState(() {
-        images = selectedImages; // Update the state with the selected images
+        images = selectedImages; 
       });
     }
   }
@@ -943,7 +990,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
     final XFile? selectedImage = await imagePicker.pickImage(source: ImageSource.camera);
     if (selectedImage != null && mounted) {
       setState(() {
-        images = [selectedImage]; // Update the state with the single image
+        images = [selectedImage];
       });
     }
   }
@@ -1252,13 +1299,12 @@ class LocationInformation {
   Future<void> _uploadImages(List<XFile> images) async {
     if (images.isEmpty) return;
   
-      String uploadUrl = "https://rutaco.online/image_upload.php"; // Replace with your actual URL
+      String uploadUrl = "https://rutaco.online/image_upload.php";
       List<XFile> imagesInstance = List.from(images);
       for (XFile image in imagesInstance) {
         var request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
         request.files.add(await http.MultipartFile.fromPath('file', image.path));
 
-        //Send the request for each image
         try {
           var res = await request.send();
           var response = await http.Response.fromStream(res);

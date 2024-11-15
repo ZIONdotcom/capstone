@@ -25,7 +25,7 @@ class _CommutingGuideState extends State<CommutingGuide> {
 
   void _switchLanguage() {
     setState(() {
-      isTagalog = !isTagalog; // Toggle language
+      isTagalog = !isTagalog; //Toggle language
       commutingGuidedescription = fetchDescription();
     });
   }
