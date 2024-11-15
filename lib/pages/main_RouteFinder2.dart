@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,13 +13,13 @@ import 'dart:math';
 import 'package:capstone/step_model.dart';
 import 'package:capstone/terminal_model.dart';
 
-class Test extends StatefulWidget {
+class MainRoutefinder2 extends StatefulWidget {
   final String latOrigin, longOrigin;
   final String latDestination, longDestination;
   final String originName;
   final String destinationName;
 
-  const Test({
+  const MainRoutefinder2({
     super.key,
     required this.latOrigin,
     required this.longOrigin,
@@ -36,7 +35,7 @@ class Test extends StatefulWidget {
   _MyWidgetState createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<Test> {
+class _MyWidgetState extends State<MainRoutefinder2> {
   // Constants and initial setup variables, including Google Map API key and initial camera position.
   final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
   GoogleMapController? mapController;
@@ -161,15 +160,8 @@ class _MyWidgetState extends State<Test> {
     ));
   }
 
-  //Methods for fetching and displaying suggested routes.------------------------------------------------------------------------------
+  //Methods for fetching and displaying suggested routes.
   double proximityThreshold = 300.0; //meter
-  List<RouteSuggest> allRoutes = [];
-
-  Future<void> loadRoutes() async {
-    allRoutes = await fetchRoutesFromAPI(); // Load routes into allRoutes
-    // You can now use allRoutes for other operations
-  }
-
   Future<List<RouteSuggest>> fetchRoutesFromAPI() async {
     final response = await http
         .get(Uri.parse('https://rutaco.online/routeFinderPhp/routePoints.php'));
@@ -194,7 +186,7 @@ class _MyWidgetState extends State<Test> {
 
         // Debugging: Print parsed franchise ID, pointA, pointB, and waypoints
         print(
-            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID ");
+            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID");
 
         // Fetch the route coordinates using Google Directions API, including waypoints
         List<LatLng> routeCoordinates =
@@ -220,7 +212,7 @@ class _MyWidgetState extends State<Test> {
           routeCoordinates: routeCoordinates,
           waypoints: waypoints,
           terminalID: terminalID,
-          transportationID: transportationID,
+          transportationID: transportationID, // Include waypoints in the return
         );
       }).toList());
 
@@ -230,160 +222,48 @@ class _MyWidgetState extends State<Test> {
     }
   }
 
-  // Proximity threshold for endpoint (`point_B`) check
-  // double endproximityThreshold = 300.0; // meters, for near endpoint
-
-// Proximity threshold for route proximity check
-  double routeProximityThreshold = 300.0; // meters, for along the route
-
-  List<RouteSuggest> nearbyRoutes = [];
-
-  Future<void> findNearbyRoutes(LatLng origin) async {
+  Future<void> findNearbyRoutes(LatLng userLocation) async {
     // Fetch routes from the database
     List<RouteSuggest> routes = await fetchRoutesFromAPI();
 
-    // Check if any route is within proximity of the user's pointA/ destination
+    // Define proximity threshold (e.g., 100 meters)
+
+    List<RouteSuggest> nearbyRoutes = [];
+
+    // Check if any route is within proximity of the user's location
     for (var route in routes) {
       // Calculate distance to Point A and Point B
-      double distanceToPointA = calculateDistances(origin, route.pointA);
-      double distanceToPointB = calculateDistances(origin, route.pointB);
+      double distanceToPointA = calculateDistances(userLocation, route.pointA);
+      double distanceToPointB = calculateDistances(userLocation, route.pointB);
 
-      // Check the distance to each coordinate in the route || NEAR ROUTE - input Origin
+      // Print route coordinates for debugging
+      print(
+          'Route Franchise ID:------------------------------------------------------------------------------------------------------------------------------------------------------------- ${route.franchiseID} , Route Coordinates:');
       for (var point in route.routeCoordinates) {
-        double distanceToRoutePoint = calculateDistances(origin, point);
+        print('Latitude: ${point.latitude}, Longitude: ${point.longitude}');
+      }
+
+      // Check the distance to each coordinate in the route
+      for (var point in route.routeCoordinates) {
+        double distanceToRoutePoint = calculateDistances(userLocation, point);
         if (distanceToRoutePoint <= proximityThreshold) {
           nearbyRoutes.add(route);
+          break; // No need to check other points if we already found a nearby route
         }
       }
+
       // Optionally log distances for debugging
       print('Route Franchise ID: ${route.franchiseID}');
       print('Distance to Point A: $distanceToPointA meters');
       print('Distance to Point B: $distanceToPointB meters');
     }
+
     if (nearbyRoutes.isNotEmpty) {
       // Suggest these routes to the user
       displayRoutes(nearbyRoutes);
     } else {
       // No nearby routes found
-      print("No routes nearby end");
-    }
-  }
-
-  List<RouteSuggest> routesEnd = [];
-  //Route point b that is near or exactly the destination of the user
-  Future<void> neabyRoutesEnd(LatLng destination) async {
-    // Routes that end near the destination
-    List<RouteSuggest> alongRouteDestination =
-        []; // Routes that pass near the destination
-    // Check if any route/pointb is within proximity of the destination
-    for (var route in nearbyRoutes) {
-      // Calculate distance to Point B
-      double distanceToPointB = calculateDistances(destination, route.pointB);
-      //check if destination is near the point b of terminal
-      if (distanceToPointB <= proximityThreshold) {
-        print(
-            "Destination is near the endpoint (point_B) of route ID: ${route.franchiseID}");
-        routesEnd.add(route);
-        continue; // No need to check route points if near endpoint
-      }
-      // If destination is not near `point_B`, check if it lies along the route
-      bool destinationOnRoute = false;
-      for (var routePoint in route.routeCoordinates) {
-        // Calculate distance to each route point
-        double distanceToRoutePoint =
-            calculateDistances(destination, routePoint);
-
-        // If destination is within the route proximity threshold, add route
-        if (distanceToRoutePoint <= routeProximityThreshold) {
-          destinationOnRoute = true;
-          print(
-              "Destination lies along the route of route ID: ${route.franchiseID}");
-          alongRouteDestination.add(route);
-        }
-      }
-    }
-
-    // Display the results
-    if (routesEnd.isNotEmpty || alongRouteDestination.isNotEmpty) {
-      // Display routes ending near the destination
-      if (routesEnd.isNotEmpty) {
-        print("Routes ending near the destination:");
-      }
-
-      // Display routes passing near the destination
-      if (alongRouteDestination.isNotEmpty) {
-        print("Routes passing along the destination:");
-      }
-    } else {
-      // No nearby routes found
       print("No routes nearby");
-    }
-  }
-
-// Routes with destination along the path
-  List<RouteSuggest> nearEndTerminal = [];
-  List<RouteSuggest> alongRoutesTerminal = [];
-  Future<void> nearbyTerminalsEnd(
-      LatLng destination, List<Terminal> nearestTerminals) async {
-    // Fetch the routes first
-    List<RouteSuggest> routes = await fetchRoutesFromAPI();
-
-    // Check if any terminal pointB is within proximity of the destination
-    for (var terminal in nearestTerminals) {
-      // Filter routes by matching terminal ID
-      for (var route in routes) {
-        if (terminal.id == route.terminalID) {
-          // Calculate the distance from the destination to the point B of the route
-          double distanceToPointB =
-              calculateDistances(destination, route.pointB);
-
-          // Check if the destination is near point B
-          if (distanceToPointB <= proximityThreshold) {
-            print(
-                "Destination is near the endpoint (point_B) of Terminal ID: ${route.terminalID}");
-            nearEndTerminal.add(route);
-          }
-
-          // Now check if the destination is close to any route point (not just point B)
-          bool destinationOnRouteTerminal = false;
-          for (var routePoint in route.routeCoordinates) {
-            double distanceToRoutePoint =
-                calculateDistances(destination, routePoint);
-
-            if (distanceToRoutePoint <= routeProximityThreshold) {
-              destinationOnRouteTerminal = true;
-              break;
-            }
-          }
-
-          // If the destination is on the route, add it to alongRoutesTerminal
-          if (destinationOnRouteTerminal) {
-            print(
-                "Destination lies along the route of Terminal ID: ${route.terminalID}");
-            alongRoutesTerminal.add(route);
-          }
-        }
-      }
-    }
-
-    // Display the results
-    if (nearEndTerminal.isNotEmpty || alongRoutesTerminal.isNotEmpty) {
-      if (alongRoutesTerminal.isNotEmpty) {
-        print("Routes with destination along the route:");
-        for (var route in alongRoutesTerminal) {
-          print("Franchise ID: ${route.franchiseID}");
-        }
-      }
-
-      if (nearEndTerminal.isNotEmpty) {
-        print("Nearby terminals with point B near the destination:");
-        for (var route in nearEndTerminal) {
-          print(
-              "Terminal ID: ${route.terminalID}, Franchise ID: ${route.franchiseID}");
-        }
-      }
-    } else {
-      print("No nearby terminals or routes found.");
     }
   }
 
@@ -574,214 +454,33 @@ class _MyWidgetState extends State<Test> {
     }
   }
 
-  //tranfer routes --------------------------------------------------------------------------------------------------------------------
-  // Define a list to store connecting terminals
-
-  // Helper function to fetch routes associated with a specific terminal ID
-  Future<List<RouteSuggest>> routesForTerminal(int terminalId) async {
-    // Filter routes by terminal ID
-    List<RouteSuggest> terminalRoutes =
-        allRoutes.where((route) => route.terminalID == terminalId).toList();
-
-    return terminalRoutes;
-  }
-
-  List<TerminalPath> allConnectingPaths = []; // Store all connecting paths
-
-  //v2
-  List<TransferPoint> findTransferPoints(
-      List<RouteSuggest> nearbyRoutes, List<RouteSuggest> routesEnd) {
-    List<TransferPoint> transferPoints = [];
-
-    // Early exit if there are no nearby or destination routes
-    if (nearbyRoutes.isEmpty || routesEnd.isEmpty) {
-      print("No nearby or destination routes to check for transfers.");
-      return [];
-    }
-
-    // Iterate over each nearby route from the origin
-    for (var originRoute in nearbyRoutes) {
-      // Iterate over each route ending near the destination
-      for (var destinationRoute in routesEnd) {
-        // Check for transfer points near the coordinates of both routes
-        for (var originPoint in originRoute.routeCoordinates) {
-          for (var destinationPoint in destinationRoute.routeCoordinates) {
-            // Calculate the distance between the two points
-            double transferDistance =
-                calculateDistances(originPoint, destinationPoint);
-
-            if (transferDistance <= routeProximityThreshold) {
-              // Check if this transfer point already exists in the list
-              bool isDuplicate1 = false;
-              for (var tp in transferPoints) {
-                // Check if the transfer point with the same origin and destination already exists
-                if (tp.fromRoute.franchiseID == originRoute.franchiseID &&
-                    tp.toRoute.franchiseID == destinationRoute.franchiseID) {
-                  isDuplicate1 = true;
-                }
-              }
-              //Add the transfer point if it's not a duplicate
-              if (!isDuplicate1) {
-                print(
-                    "Transfer point found between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID} at $originPoint and $destinationPoint");
-
-                // transferPoints.add(TransferPoint(
-                //   fromRoute: originRoute,
-                //   toRoute: destinationRoute,
-                //   transferLocation:
-                //       destinationRoute.pointA, // Location where transfer occurs
-                // ));
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Log results if transfer points are identified
-    if (transferPoints.isNotEmpty) {
-      print("Transfer points found:");
-      for (var transfer in transferPoints) {
-        print(
-            "Transfer from Route ${transfer.fromRoute.franchiseID} to Route ${transfer.toRoute.franchiseID} at ${transfer.transferLocation}");
-      }
-    } else {
-      print("No transfer points found between routes.");
-    }
-
-    return transferPoints; // Return the list of transfer points
-  }
-
-  List<List<TransferPoint>> findConnectedTransferPaths(
-      List<RouteSuggest> nearbyRoutes,
-      List<RouteSuggest> routesEnd,
-      LatLng destination) {
-    List<List<TransferPoint>> connectedPaths =
-        []; // Stores all possible paths to destination
-
-    // Early exit if routes are not available
-    if (nearbyRoutes.isEmpty || routesEnd.isEmpty) {
-      print("No nearby or destination routes to check for transfers.");
-      return [];
-    }
-
-    // Helper function for recursive path finding
-    List<List<RouteSuggest>> findPath(
-        RouteSuggest startRoute,
-        LatLng destination,
-        List<RouteSuggest> allRoutes,
-        double routeProximityThreshold) {
-      List<List<RouteSuggest>> paths = [];
-      Queue<List<RouteSuggest>> queue = Queue();
-      queue.add([startRoute]);
-
-      while (queue.isNotEmpty) {
-        List<RouteSuggest> currentPath = queue.removeFirst();
-        RouteSuggest currentRoute = currentPath.last;
-
-        // Check if any point along the current route is near the destination
-        for (var routePoint in currentRoute.routeCoordinates) {
-          if (calculateDistances(routePoint, destination) <=
-              routeProximityThreshold) {
-            // If near the destination, mark this path as complete
-            paths.add(currentPath);
-            print("Path found to destination at $routePoint");
-            break;
-          }
-        }
-
-        // If this route has not reached the destination, continue finding transfer points
-        if (paths.isEmpty || paths.last != currentPath) {
-          List<TransferPoint> transferPoints =
-              findTransferPoints([currentRoute], allRoutes);
-
-          for (var transfer in transferPoints) {
-            // Check if this route has already been visited in the current path
-            if (!currentPath.contains(transfer.toRoute)) {
-              List<RouteSuggest> newPath = List.from(currentPath);
-              newPath.add(transfer.toRoute);
-              queue.add(newPath);
-            }
-          }
-        }
-      }
-
-      return paths;
-    }
-
-    List<List<RouteSuggest>> allPaths = [];
-
-    // Start pathfinding for each route in nearbyRoutes
-    for (var originRoute in nearbyRoutes) {
-      // Find paths from each originRoute to the destination
-      List<List<RouteSuggest>> pathsFromOrigin = findPath(
-          originRoute, destination, allRoutes, routeProximityThreshold);
-
-      // Add the found paths to the allPaths list
-      allPaths.addAll(pathsFromOrigin);
-    }
-
-// Now allPaths contains all routes leading from any nearby origin route to the destination
-    print("All possible paths to destination: ");
-    for (var path in allPaths) {
-      print("Path: ${path.map((route) => route.franchiseID).join(' -> ')}");
-    }
-
-    // Log results if paths are identified
-    if (connectedPaths.isNotEmpty) {
-      print("Connected paths leading to destination found:");
-      for (var path in connectedPaths) {
-        print("Path:");
-        for (var transfer in path) {
-          print(
-              "Transfer from Route ${transfer.fromRoute.franchiseID} to Route ${transfer.toRoute.franchiseID} at ${transfer.transferLocation}");
-        }
-      }
-    } else {
-      print("No connected paths to destination found.");
-    }
-
-    return connectedPaths;
-  }
-
-//end transfer routes----------------------------------------------------------------------------------------------------------------
-
   //Methods for fetching location data, such as nearest terminal, road, and public transport routes.
-  // Global variable to store nearest terminals
-
-  Future<List<Terminal>> getNearestTerminals(LatLng location) async {
-    // Fetch all available terminals
+  Future<Terminal?> getNearestTerminal(LatLng location) async {
     List<Terminal> terminals = await fetchTerminals();
-    List<Terminal> nearestTerminals = [];
 
-    // Clear the global list to avoid duplicate entries from previous calls
-    //nearestTerminals.clear();
-
+    Terminal? nearestTerminal;
+    double minDistance = proximityThreshold;
     LatLng origin = LatLng(location.latitude, location.longitude);
 
     for (Terminal terminal in terminals) {
-      LatLng terminalLocation = LatLng(terminal.latitude, terminal.longitude);
-      double distance = calculateDistances(origin, terminalLocation);
+      LatLng terminals = LatLng(terminal.latitude, terminal.longitude);
+      double distance = calculateDistances(origin, terminals);
 
       print(
-          'Threshold: $distance , Distance: $distance , Terminal: ${terminal.latitude}, ${terminal.longitude}, Location: $origin');
+          'mindistance: $minDistance , distance: $distance , terminal: ${terminal.latitude} ,${terminal.longitude} , location: $origin ');
 
-      // Check if terminal is within the minimum distance threshold
-      if (proximityThreshold > distance) {
-        nearestTerminals.add(terminal);
-        print('Nearest Terminal: ${terminal.name}');
+      if (distance < minDistance) {
+        //minDistance = distance;
+        nearestTerminal = terminal;
       }
     }
 
-    // Check if any terminals were found within the threshold
-    if (nearestTerminals.isNotEmpty) {
-      print('Nearest terminals found and stored in global variable.');
+    if (nearestTerminal != null) {
+      return nearestTerminal;
     } else {
-      print('No terminals found within proximity threshold.');
+      print('No terminals found.');
     }
-
-    // Return the list of nearest terminals
-    return nearestTerminals;
+    return null;
   }
 
   Future<void> getNearestRoad(double latitude, double longitude) async {
@@ -1051,37 +750,6 @@ class _MyWidgetState extends State<Test> {
     }
   }
 
-  late LatLng originLocation;
-  late LatLng destinationLocation;
-
-  // In initState
-  initData() async {
-    // Step 1: Find Nearby Routes
-    await findNearbyRoutes(originLocation);
-    if (nearbyRoutes.isNotEmpty) {
-      List<RouteSuggest> routesTerminal = await fetchRoutesFromAPI();
-      neabyRoutesEnd(destinationLocation);
-// Find and store transfer points
-      List<TransferPoint> transferPoints =
-          findTransferPoints(nearbyRoutes, routesTerminal);
-
-      // Correct call:
-      findConnectedTransferPaths(
-          nearbyRoutes, routesTerminal, destinationLocation);
-    } else {
-      print("No nearby routes found after initialization.");
-    }
-
-    // Step 2: Get Nearest Terminals after routes
-    final nearestTerminals = await getNearestTerminals(originLocation);
-    if (nearestTerminals.isNotEmpty) {
-      nearbyTerminalsEnd(destinationLocation, nearestTerminals);
-      // Optionally: findConnectingTerminals(destinationLocation, nearestTerminals);
-    } else {
-      print("No nearby terminals found after initialization.");
-    }
-  }
-
   // INITSTATE
   @override
   void initState() {
@@ -1094,44 +762,43 @@ class _MyWidgetState extends State<Test> {
     destinationlat = double.parse(widget.latDestination);
     destinationlong = double.parse(widget.longDestination);
 
-    originLocation = LatLng(
+    LatLng originLocation = LatLng(
       double.parse(widget.latOrigin),
       double.parse(widget.longOrigin),
     );
 
-    destinationLocation = LatLng(
-      double.parse(widget.latDestination),
-      double.parse(widget.longDestination),
-    );
+    print(
+        'TEST ---------------------------mmjksfkdbjgbker     jksbjfbsr -----------------------origin: ${widget.latOrigin}, ${widget.longOrigin}long: ${widget.latDestination}, ${widget.longDestination}');
+    //LatLng sample = const LatLng(14.827017, 120.883796);
 
-    loadRoutes();
+    //test latlng sample should be palitan ng origin latlng
 
-    // Fetch routes and terminals
-    fetchAndPrintRoutes(); //debugging
-    fetchRoute();
+    //TEST ZONE
+    //routes from db
+    fetchAndPrintRoutes();
 
-    // // Fetch nearby routes and terminals, then find transfer options
-    // Future.wait([
-    //   findNearbyRoutes(originLocation).then((_) {
-    //     if (nearbyRoutes.isNotEmpty) {
-    //       neabyRoutesEnd(destinationLocation);
-    //       findTransferOptionsFromPointB(originLocation, allRoutes);
-    //     } else {
-    //       print("No nearby routes found after initialization.");
-    //     }
-    //   }),
-    //   getNearestTerminals(originLocation).then((nearestTerminals) {
-    //     if (nearestTerminals.isNotEmpty) {
-    //       nearbyTerminalsEnd(destinationLocation, nearestTerminals);
-    //       //findConnectingTerminals(destinationLocation, nearestTerminals);
-    //     } else {
-    //       print("No nearby terminals found after initialization.");
-    //     }
-    //   }),
-    // ]);
-    setState(() {});
+    // function to get the nearest terminal
+    getNearestTerminal(originLocation).then((nearestTerminal) {
+      print('Nearest Terminal: ${nearestTerminal?.name}');
+      print('Terminal ID: ${nearestTerminal?.id}');
+      print('Latitude: ${nearestTerminal?.latitude}');
+      print('Longitude: ${nearestTerminal?.longitude}');
+    }).catchError((error) {
+      print('Error finding nearest terminal: $error');
+    });
+    // Call the function to fetch terminals and print the results
+    fetchTerminals().then((terminals) {
+      for (Terminal terminal in terminals) {
+        print(
+            'Terminal ID: ${terminal.id}, Name: ${terminal.name}, Latitude: ${terminal.latitude}, Longitude: ${terminal.longitude}');
+      }
+    }).catchError((error) {
+      print('Error fetching terminals: $error');
+    });
+    print('ewan ko kung gagana ${getNearestTerminal(originLocation)}');
 
-    initData();
+    //nearby routes passing - ongoing
+    findNearbyRoutes(originLocation);
 
     //TESt - ongoing
     //testFetchRouteCoordinates();
@@ -1158,6 +825,8 @@ class _MyWidgetState extends State<Test> {
         // liveLocation();
       },
     );
+
+    fetchRoute();
 
     _setCustomMarkerIcon();
     getRoutes();
@@ -1519,7 +1188,7 @@ class _MyWidgetState extends State<Test> {
                   longOrigin: widget.latOrigin,
                   latDestination: widget.latDestination,
                   longDestination: widget.longDestination,
-                  // legs: legs,
+                  //legs: legs,
                   steps: steps,
                   origin: _controllerTo.text,
                   destination: _controllerFrom.text)),
@@ -1570,25 +1239,25 @@ class _MyWidgetState extends State<Test> {
                     ),
 
                     //route
-                    // Row(
-                    //   children: [
-                    //     Container(
-                    //       padding: const EdgeInsets.only(
-                    //           right: 8.0), // Space between the two texts
-                    //       child: const Text(
-                    //         "Fare:",
-                    //         style: TextStyle(color: Colors.black),
-                    //         textAlign:
-                    //             TextAlign.start, // Align text to the start
-                    //       ),
-                    //     ),
-                    //     Text(
-                    //       fare,
-                    //       style: const TextStyle(color: Colors.black),
-                    //       textAlign: TextAlign.start, // Align text to the start
-                    //     ),
-                    //   ],
-                    // ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.only(
+                              right: 8.0), // Space between the two texts
+                          child: const Text(
+                            "Fare:",
+                            style: TextStyle(color: Colors.black),
+                            textAlign:
+                                TextAlign.start, // Align text to the start
+                          ),
+                        ),
+                        Text(
+                          fare,
+                          style: const TextStyle(color: Colors.black),
+                          textAlign: TextAlign.start, // Align text to the start
+                        ),
+                      ],
+                    ),
                     Row(
                       children: [
                         Container(

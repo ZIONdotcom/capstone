@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 class routefinder3 extends StatefulWidget {
   @override
-  final List<dynamic> legs;
+  //final List<dynamic> legs;
   final List<dynamic> steps;
   final String origin;
   final String destination;
@@ -21,7 +21,7 @@ class routefinder3 extends StatefulWidget {
     required this.longOrigin,
     required this.latDestination,
     required this.longDestination,
-    required this.legs,
+    //required this.legs,
     required this.steps,
     required this.origin,
     required this.destination,
@@ -38,7 +38,7 @@ class ThirdScreenState extends State<routefinder3> {
   List<LatLng> polylineCoordinates = [];
 
   late List<dynamic> transitType;
-  late List<dynamic> legs;
+  // late List<dynamic> legs;
   late List<dynamic> steps;
   late GoogleMapController _mapController;
   final LatLng _startLocation =
@@ -54,7 +54,7 @@ class ThirdScreenState extends State<routefinder3> {
   @override
   void initState() {
     super.initState();
-    legs = widget.legs;
+    // legs = widget.legs;
     steps = widget.steps;
     getRoutePolyline();
     transitType = [];
@@ -77,7 +77,7 @@ class ThirdScreenState extends State<routefinder3> {
     //   ),
     // );
 
-    print(legs);
+    //print(legs);
     print(
         '----------------------------------------------------------------\n------------------------------------------------');
     _fromController.text = widget.origin;
@@ -484,16 +484,13 @@ class ThirdScreenState extends State<routefinder3> {
                         ),
                       );
                     }
-//suggested steps
-                    final step = steps[index];
 
-                    // Example SVG Picture, replace with your actual SVG asset
+                    //Displaying of Routes STeps from Google API
+                    final step = steps[index];
                     SvgPicture picwalk =
                         SvgPicture.asset('assets/icons/walk2.svg');
                     SvgPicture picride =
                         SvgPicture.asset('assets/icons/bus2.svg');
-
-                    // Assuming you have the necessary fields in each leg
                     String transpoName = step['travel_mode'] ?? 'Unknown';
                     String time = step['duration']['text'] ?? 'N/A';
                     String geton = step['html_instructions'] ?? 'N/A';
@@ -502,8 +499,6 @@ class ThirdScreenState extends State<routefinder3> {
                     String getoff = step['getoff'] ?? 'N/A';
                     String route = step['route'] ?? 'N/A';
                     final num = steps.length.toString();
-                    print("!!!!!!!!!!!!!!!!!!!!! $transpoName");
-                    print("################################### $num");
 
                     if (transpoName == 'TRANSIT') {
                       transitType.add("TRANSIT");
@@ -736,12 +731,12 @@ class ThirdScreenState extends State<routefinder3> {
                         style: const TextStyle(color: Colors.black),
                       ),
                       const Spacer(),
-                      Text(
-                        fare,
-                        style: const TextStyle(
-                            color:
-                                Colors.black), // Adjust text color for contrast
-                      ),
+                      // Text(
+                      //   fare,
+                      //   style: const TextStyle(
+                      //       color:
+                      //           Colors.black), // Adjust text color for contrast
+                      // ),
                       const Spacer(),
                       Text(
                         time,
@@ -756,32 +751,32 @@ class ThirdScreenState extends State<routefinder3> {
                     height: 10,
                   ),
 
-                  //route
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 4, // 20% of the space
-                        child: Container(
-                          padding: const EdgeInsets.only(
-                              right: 8.0), // Space between the two texts
-                          child: const Text(
-                            "Route",
-                            style: TextStyle(color: Colors.black),
-                            textAlign:
-                                TextAlign.start, // Align text to the start
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 6, // 80% of the space
-                        child: Text(
-                          route,
-                          style: const TextStyle(color: Colors.black),
-                          textAlign: TextAlign.start, // Align text to the start
-                        ),
-                      ),
-                    ],
-                  ),
+                  // //route
+                  // Row(
+                  //   children: [
+                  //     Expanded(
+                  //       flex: 4, // 20% of the space
+                  //       child: Container(
+                  //         padding: const EdgeInsets.only(
+                  //             right: 8.0), // Space between the two texts
+                  //         child: const Text(
+                  //           "Route",
+                  //           style: TextStyle(color: Colors.black),
+                  //           textAlign:
+                  //               TextAlign.start, // Align text to the start
+                  //         ),
+                  //       ),
+                  //     ),
+                  //     Expanded(
+                  //       flex: 6, // 80% of the space
+                  //       child: Text(
+                  //         route,
+                  //         style: const TextStyle(color: Colors.black),
+                  //         textAlign: TextAlign.start, // Align text to the start
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
 
                   //get on
                   Row(
@@ -810,31 +805,31 @@ class ThirdScreenState extends State<routefinder3> {
                     ],
                   ),
                   //get off
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 4, // 20% of the space
-                        child: Container(
-                          padding: const EdgeInsets.only(
-                              right: 8.0), // Space between the two texts
-                          child: const Text(
-                            "Get off",
-                            style: TextStyle(color: Colors.black),
-                            textAlign:
-                                TextAlign.start, // Align text to the start
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 6, // 80% of the space
-                        child: Text(
-                          getoff,
-                          style: const TextStyle(color: Colors.black),
-                          textAlign: TextAlign.start, // Align text to the start
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Row(
+                  //   children: [
+                  //     Expanded(
+                  //       flex: 4, // 20% of the space
+                  //       child: Container(
+                  //         padding: const EdgeInsets.only(
+                  //             right: 8.0), // Space between the two texts
+                  //         child: const Text(
+                  //           "Get off",
+                  //           style: TextStyle(color: Colors.black),
+                  //           textAlign:
+                  //               TextAlign.start, // Align text to the start
+                  //         ),
+                  //       ),
+                  //     ),
+                  //     Expanded(
+                  //       flex: 6, // 80% of the space
+                  //       child: Text(
+                  //         getoff,
+                  //         style: const TextStyle(color: Colors.black),
+                  //         textAlign: TextAlign.start, // Align text to the start
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),
