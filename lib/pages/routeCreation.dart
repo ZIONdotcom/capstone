@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart'; //use to convert coordinates to address
-import 'map_For_Polylines.dart';
-import 'polyline_decoder.dart';
+// import 'map_For_Polylines.dart';
+// import 'polyline_decoder.dart';
+import 'polylineDecoder.dart';
 
 class RouteCreation extends StatefulWidget {
   const RouteCreation({super.key});
@@ -26,7 +27,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   late LatLng origin_coordinates;
 
   final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY'; 
-  final PolylineDecoder _polylineDecoder = PolylineDecoder('AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY');
+  final Polylinedecoder _polylineDecoder = Polylinedecoder('AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY');
 
   final PageController pageController = PageController();
   final ScrollController scrollController = ScrollController();
@@ -69,7 +70,44 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       
     });
   }
+List<LatLng> decodePolyline(String encoded) {
+    List<LatLng> polyline = [];
+    List<int> bytes = encoded.codeUnits;
+    int index = 0;
+    int lat = 0;
+    int lng = 0;
 
+    while (index < bytes.length) {
+      int result = 0;
+      int shift = 0;
+      int byte;
+      do {
+        byte = bytes[index] - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+        index++;
+      } while (byte >= 0x20);
+
+      int deltaLat = ((result & 0x01) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += deltaLat;
+
+      result = 0;
+      shift = 0;
+      do {
+        byte = bytes[index] - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+        index++;
+      } while (byte >= 0x20);
+
+      int deltaLng = ((result & 0x01) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += deltaLng;
+
+      polyline.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+
+    return polyline;
+  }
  void _fetchPolyline() async {
   //Fetch the polyline points between the specified pinned locations
   final polylinePoints = await _polylineDecoder.getRoutePolyline(
@@ -605,20 +643,20 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
 
 
   //for editing polyines
-  void _showMapPolylines(BuildContext context){
-    showDialog(
-      context: context, 
-      builder: (context) => Dialog(
-        child: SizedBox(
-          width: double.infinity,
-          height: 300,
-          child: MapForPolylines(
-            pointA: pinnedLocations[currentPageTracker -1],
-            pointB:  pinnedLocations[currentPageTracker],
-          ),
-        ),
-      ));
-  }
+  // void _showMapPolylines(BuildContext context){
+  //   showDialog(
+  //     context: context, 
+  //     builder: (context) => Dialog(
+  //       child: SizedBox(
+  //         width: double.infinity,
+  //         height: 300,
+  //         child: MapForPolylines(
+  //           pointA: pinnedLocations[currentPageTracker -1],
+  //           pointB:  pinnedLocations[currentPageTracker],
+  //         ),
+  //       ),
+  //     ));
+  // }
   void _showDialog(BuildContext context) {
     showDialog(
       context: context,

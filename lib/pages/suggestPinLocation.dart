@@ -897,6 +897,12 @@ class _BuildTerminalState extends State<BuildTerminal> {
   }
 }
 
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }}
+
 class BuildEstablishment extends StatefulWidget {
   const BuildEstablishment({super.key});
 
@@ -1228,6 +1234,12 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
   }
 }
 
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }}
+
 class LocationInformation {
   static final LocationInformation _instance = LocationInformation._internal();
 
@@ -1345,3 +1357,4 @@ class LocationInformation {
     }
   }
 }
+
