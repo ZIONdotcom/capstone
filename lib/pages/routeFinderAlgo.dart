@@ -5,14 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'routeFinder.dart';
-import 'package:capstone/pages/routefinder3.dart';
-import 'package:capstone/pages/routeCreation.dart';
 import 'dart:math';
 import 'package:capstone/step_model.dart';
 import 'package:capstone/terminal_model.dart';

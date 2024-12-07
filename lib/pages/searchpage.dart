@@ -14,7 +14,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, dynamic>> _suggestions = [];
   bool _isLoading = false;
-  final String apiKey = ' AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  final String apiKey = 'AIzaSyC88-Wkb5_LmPU5OCQwPOMDTry3RGh1J00';
   final FocusNode  focusNode = FocusNode();
 
   @override

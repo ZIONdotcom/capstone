@@ -2,33 +2,14 @@ import 'dart:convert';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
-class Polylinedecoder {
+class FetchDataFromMaps{
   final String apiKey;
 
-  Polylinedecoder(this.apiKey);
+  FetchDataFromMaps(this.apiKey);
 
-  /// Fetches and decodes a list of LatLng from a list of points (origin, midpoint, destination)
-  Future<List<LatLng>> getRoutePolyline(List<LatLng> points) async {
-    if (points.isEmpty || points.length < 2) {
-      throw Exception('At least two points (origin and destination) are required.');
-    }
-
-    List<LatLng> allPoints = [];
-
-    // Fetch polyline for each segment between consecutive points in the list
-    for (int i = 0; i < points.length - 1; i++) {
-      final start = points[i];
-      final end = points[i + 1];
-
-      final routeSegment = await fetchPolylineSegment(start, end);
-      allPoints.addAll(routeSegment);
-    }
-
-    return allPoints;
-  }
-
-  /// Fetches the polyline between two points from the Directions API
-  Future<List<LatLng>> fetchPolylineSegment(LatLng start, LatLng end) async {
+  
+  //Fetches and decodes the polyline from Google Directions API
+  Future<List<LatLng>> getRoutePolyline(LatLng start, LatLng end) async {
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&key=$apiKey',
     );
@@ -46,28 +27,22 @@ class Polylinedecoder {
     }
   }
 
-  /// Decodes a polyline encoded string to a list of LatLng
+  //Decoding polylines to list of LatLng
   List<LatLng> decodePolyline(String encoded) {
     List<LatLng> polyline = [];
-    int index = 0;
-    int len = encoded.length;
-    int lat = 0;
-    int lng = 0;
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
 
-    // Loop through the encoded polyline string
     while (index < len) {
       int b, shift = 0, result = 0;
-
-      // Decode the latitude
       do {
         b = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1F) << shift;
         shift += 5;
       } while (b >= 0x20);
-      int dlat = (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lat += dlat;
 
-      // Decode the longitude
       shift = 0;
       result = 0;
       do {
@@ -75,13 +50,11 @@ class Polylinedecoder {
         result |= (b & 0x1F) << shift;
         shift += 5;
       } while (b >= 0x20);
-      int dlng = (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lng += dlng;
 
-      // Add the decoded point to the polyline list
       polyline.add(LatLng(lat / 1E5, lng / 1E5));
     }
-
     return polyline;
   }
 }

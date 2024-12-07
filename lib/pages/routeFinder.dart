@@ -139,11 +139,11 @@ class _RouteFinderState extends State<RouteFinder> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       "Choose a route Suggesting option:",
                       style: TextStyle(
                         fontSize: 13,

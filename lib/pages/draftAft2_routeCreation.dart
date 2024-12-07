@@ -1,24 +1,25 @@
+// complete database insertion
+// have preview (incomplete)
+
 import 'dart:convert';
 import 'dart:core';
-import 'package:capstone/pages/mapForPolylines.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart'; //use to convert coordinates to address
-import 'searchPage.dart';
-
+// import 'map_For_Polylines.dart';
 // import 'polyline_decoder.dart';
 import 'polylineDecoder.dart';
 
-class RouteCreation extends StatefulWidget {
-  const RouteCreation({super.key});
+class Draft2_RouteCreation extends StatefulWidget {
+  const Draft2_RouteCreation({super.key});
 
   @override
-  State<RouteCreation> createState() => _MyWidgetState();
+  State<Draft2_RouteCreation> createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderStateMixin {
+class _MyWidgetState extends State<Draft2_RouteCreation> with SingleTickerProviderStateMixin {
 
   GoogleMapController? mapController;
   Marker? originMarker;
@@ -26,10 +27,9 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   Polyline? temporaryPolyline;
   String? origin_address;
   late LatLng origin_coordinates;
-  String selectedLocation = 'Search Location';
 
-  final String apiKey = 'AIzaSyC88-Wkb5_LmPU5OCQwPOMDTry3RGh1J00'; 
-  final Polylinedecoder _polylineDecoder = Polylinedecoder('AIzaSyC88-Wkb5_LmPU5OCQwPOMDTry3RGh1J00');
+  final String apiKey = 'AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI'; 
+  final Polylinedecoder _polylineDecoder = Polylinedecoder('AIzaSyAnDp1NMv3WSsatCAjJL02Y_fL8a44L4NI');
 
   final PageController pageController = PageController();
   final ScrollController scrollController = ScrollController();
@@ -43,37 +43,28 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
 
   final Map<int, List<dynamic>> stepsCpntainer = {};
   List<LatLng> pinnedLocations = []; //coordinates
-  Map <int, List<LatLng>> step_polyline = {};
   final Set<Polyline> _polylines = {};
   final List<PolylineId> polyline_IDs = [];
   final Set<Marker> _markers = {}; 
   final Set<Marker> _originMarker = {};
   int stepNumber = 0;
 
-  PolylineId _updatecurrentPolylineId = PolylineId('NoId');
   final List<String> existingPagesTracker = [];
   String currentPage = 'origin';
 
-
-  void setNewPolyId(PolylineId id){
-    setState(() {
-      _updatecurrentPolylineId = id;
-      print('setnew id');
-    });
-  }
   void _fetchPolylineForExisting(LatLng pointA, LatLng pointB, Polyline nextPolyline,PolylineId polylineID) async{
     final polylinePoints = await _polylineDecoder.getRoutePolyline(
     [pointA,pointB]);
     setState(() {
       try{
-        Polyline newNPolyline = Polyline(
+        Polyline newNextPolyline = Polyline(
           polylineId: polylineID,
           points: polylinePoints,
           color: Colors.blue,
           width: 5,
         );
         _polylines.remove(nextPolyline);
-        _polylines.add(newNPolyline);
+        _polylines.add(newNextPolyline);
         print('successful updating next polyline');
       }catch(e){
         print('error updating next polyline');
@@ -81,54 +72,68 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       
     });
   }
+List<LatLng> decodePolyline(String encoded) {
+    List<LatLng> polyline = [];
+    List<int> bytes = encoded.codeUnits;
+    int index = 0;
+    int lat = 0;
+    int lng = 0;
 
- void _fetchPolyline() async {
-  List<LatLng> polylinePoints;
-  PolylineId? previousPolylineid;
-  if(currentPageTracker == 0){
-    //if nasa origin
-    polylinePoints = await _polylineDecoder.getRoutePolyline(
-    [pinnedLocations[currentPageTracker],
-    pinnedLocations[currentPageTracker+1]]
-   
-  );
+    while (index < bytes.length) {
+      int result = 0;
+      int shift = 0;
+      int byte;
+      do {
+        byte = bytes[index] - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+        index++;
+      } while (byte >= 0x20);
+
+      int deltaLat = ((result & 0x01) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += deltaLat;
+
+      result = 0;
+      shift = 0;
+      do {
+        byte = bytes[index] - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+        index++;
+      } while (byte >= 0x20);
+
+      int deltaLng = ((result & 0x01) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += deltaLng;
+
+      polyline.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+
+    return polyline;
   }
-  else{
-    polylinePoints = await _polylineDecoder.getRoutePolyline(
+ void _fetchPolyline() async {
+  //Fetch the polyline points between the specified pinned locations
+  final polylinePoints = await _polylineDecoder.getRoutePolyline(
     [pinnedLocations[currentPageTracker - 1],
     pinnedLocations[currentPageTracker]]
   );
-  previousPolylineid  = PolylineId('polyline${currentPageTracker-1}');
-  }
-  //Fetch the polyline points between the specified pinned locations
-  
   print(polylinePoints);
-  step_polyline[currentPageTracker] = polylinePoints;
 
   PolylineId polylineID = PolylineId('polyline$currentPageTracker');
-  setNewPolyId(PolylineId('polyline$currentPageTracker'));
   int nextIndex = currentPageTracker+1;
   PolylineId nextPolylineid = PolylineId('polyline$nextIndex');
     try {
       //Find the existing polyline, if any, by filtering on polylineId
       Polyline? existingPolyline;
       Polyline? nextExistingpolyline;
-      Polyline? previousPolyine;
       for (var polyline in _polylines) {
         if (polyline.polylineId == polylineID) {
           existingPolyline = polyline;
-          print('existing polyline is visible');
         }
         if(polyline.polylineId == nextPolylineid){
           nextExistingpolyline = polyline;
         }
-        if(previousPolylineid !=  null && polyline.polylineId == previousPolylineid){
-          previousPolyine = polyline;
-        }
       }
       setState(() {
-         
-         print("assign: $_updatecurrentPolylineId");
       if (existingPolyline != null) {
         //If the polyline exists, remove it from the set
         _polylines.remove(existingPolyline);
@@ -139,11 +144,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         print('Adding new polyline');
         polyline_IDs.add(polylineID);
       }
-      // if (previousPolyine != null) {
-      //   //If the polyline exists, remove it from the set
-      //   _polylines.remove(previousPolyine);
-      //   print('Updated existing polyline');
-      // } 
 
       //Create a new polyline with the updated points
       Polyline newPolyline = Polyline(
@@ -153,62 +153,18 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         width: 5,
       );
       DataManager().insert_decodedPolyline_ToDM([newPolyline.points.first, newPolyline.points.last]);
-      DataManager().insert_AllDecodedPolyline_ToDM(polylinePoints);
-      getMidpoint(polylinePoints);
-      
 
       //Add the updated or new polyline
       _polylines.add(newPolyline);
-      print('polyline added');
        if(nextExistingpolyline != null){
         nextExistingpolyline.points.first = newPolyline.points.last;
         _fetchPolylineForExisting(nextExistingpolyline.points.first,nextExistingpolyline.points.last,nextExistingpolyline,nextPolylineid);
-        // if(previousPolyine != null){
-        //   _fetchPolylineForExisting(previousPolyine.points.first, newPolyline.points.first,previousPolyine,previousPolylineid!);
-        // }
       }
       });
     } catch (e) {
       print('Error updating or adding polyline: $e');
     }
 }
-bool notChanged = false;
-void getMidpoint(List<LatLng> midpoints){
-  double computeMiddle = midpoints.length / 2;
-  int middle = computeMiddle.toInt();
-  LatLng middlepoint = midpoints[middle];
-  notChanged = true;
-  DataManager().insert_midpoint(currentPageTracker, [middlepoint], notChanged);
-  
-}
-
-void updatePolylineFromChange(List<LatLng> midpoints) async {
-  // Assuming _polylineDecoder.getRoutePolyline(midpoints) returns the updated points
-  final updatePolylinePoints = await _polylineDecoder.getRoutePolyline(midpoints);
-  print('update poly: $midpoints');
-  print('update Polyline From Change: $_updatecurrentPolylineId');
-
-  // Use forEach to iterate over the list of polylines and find the polyline to update
-  _polylines.forEach((poly) {
-    if (poly.polylineId == _updatecurrentPolylineId) {
-      // Found the polyline to update
-      setState(() {
-        // Create a new Polyline with the updated midpoints
-        Polyline updatedPolyline = Polyline(
-          polylineId: _updatecurrentPolylineId!,  // Use the same PolylineId
-          points: midpoints,  // Updated points (midpoints)
-          color: Colors.blue,  // Set the color as needed
-          width: 5,  // Set the width as needed
-        );
-
-        // Remove the old polyline and add the updated one
-        _polylines.remove(poly);
-        _polylines.add(updatedPolyline);
-      });
-    }
-  });
-}
-
   void changeWidget_for_changedButton(String nextButton){
     print('pages: $pages');
     int indexForNext = currentPageTracker + 1;
@@ -283,14 +239,14 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
           
           if(currentPage == 'walk'){
             sheetSizes[1] = 0.40;
-            sheetSizes[0] = 0.50;
+            sheetSizes[0] = 0.60;
             
-            sheetSizes[2] = 0.50;
+            sheetSizes[2] = 0.60;
           }
           else if(currentPage == 'ride'){
             sheetSizes[1] = 0.40;
-            sheetSizes[0] = 0.50;
-            sheetSizes[2] = 0.50;
+            sheetSizes[0] = 0.70;
+            sheetSizes[2] = 0.70;
             // print('ride size');
           }
           else if( currentPage == 'origin'){
@@ -418,7 +374,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data['results'] != null && data['results'].isNotEmpty) {
-        placeName = data['results'][1]['name']; //Get the second nearby place
+        placeName = data['results'][0]['name']; //Get the first nearby place
         print('place name: $placeName $address');
         DataManager().set_temporary_LocationName(placeName);
        
@@ -477,7 +433,6 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       if (pinnedLocations.length > 1) {
         print('try to fetch polyliine...');
         _fetchPolyline();
-
         print('polyliine fetched');
       } 
       else{
@@ -532,121 +487,15 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
                     },
                   ),
                 ),
-                Container(
-            margin: const EdgeInsets.only(top: 2, left: 5, right: 5),
-            padding: const EdgeInsets.only(top: 10, bottom: 3, left: 5),
-            height: 37,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, size: 20),
-                Expanded(
-                  child: TextFormField(
-                    onTap: () async {
-                      final newInitialPosition = await Navigator.push<Map<String, dynamic>>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SearchPage(),
-                        ),
-                      );
-
-                    //Update the map's camera position if a location was selected
-                    if (newInitialPosition != null) {
-                      mapController!.animateCamera(
-                        CameraUpdate.newLatLng(newInitialPosition['latLng']),
-                      );
-                      setState(() {
-                        selectedLocation = newInitialPosition['name'];
-                      });
-                    }
-                  },
-                  readOnly: true, //Make TextFormField non-editable
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                      hintText: selectedLocation,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(5),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if(_polylines.isNotEmpty && questionIsVisible == false)
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 65),
-            // padding: const EdgeInsets.only(top: 5,bottom: 5),
-            height: 35,
-            width: 234,
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: const Color(0xFFc2d0ff), 
-                width: 1.0, 
-              ),
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff1D1617).withOpacity(0.11),
-                  blurRadius: 4,
-                  spreadRadius: 0.2,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center, 
-              children: [
-                
-                Flexible(
-                  child: TextButton(
-                    onPressed: () {
-                      _showMapPolylines(context);
-                      print('pressed floating');
-                    },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero, 
-                      foregroundColor: const Color(0xff1F41BB),
-                    ),
-                    child: const Text(
-                      'Incorrect line? Click here to edit',
-                      style: TextStyle(
-                        fontSize: 13,
-                        overflow: TextOverflow.ellipsis, 
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        if (mapClicked)
-        DraggableScrollableSheet(
+                if (mapClicked)
+                  DraggableScrollableSheet(
         initialChildSize: sheetSizes[0],
         minChildSize: sheetSizes[1],
         maxChildSize: sheetSizes[2],
         builder: (context, scrollController) {
           final screenHeight = MediaQuery.of(context).size.height;
-          final keyboardHeight = MediaQuery.of(context).viewInsets.bottom; 
+          final keyboardHeight = MediaQuery.of(context).viewInsets.bottom; // To check if the keyboard is visible
+      
           return ClipRRect(
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(20.0),
@@ -752,6 +601,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
                 ],
               ),
             ),
+            // Wrap the content with Flexible instead of SizedBox to adjust dynamically
             Flexible(
               child: SingleChildScrollView(
                 controller: scrollController,
@@ -759,8 +609,8 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      //Adjust the height dynamically based on screen and keyboard
-                      height: questionIsVisible ? 80 : screenHeight - keyboardHeight - 350, // Adjust for screen and keyboard
+                      // Adjust the height dynamically based on screen and keyboard
+                      height: questionIsVisible ? 80 : screenHeight - keyboardHeight - 330, // Adjust for screen and keyboard
                       child: pages.length > 1 && pages.length - 1 == _markers.length
                           ? question_pages[questionPageTracker]
                           : pages[currentPageTracker],
@@ -777,7 +627,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       ),
       
                 Positioned(
-                  top: 45,
+                  top: 20,
                   right: 20,
                   child: FloatingActionButton(
                     onPressed: _focusOnLastPinnedLocation,
@@ -794,46 +644,21 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
   }
 
 
-  //para se fetching ng decoded polyline then assign it again
-  Set<Polyline> polylinesInStep = {};
-  Set<Polyline> _convertListToPolyline(){
-    if(step_polyline.isNotEmpty){
-      List<LatLng>? inStepPolylines = step_polyline[currentPageTracker];
-      for(int i = 0; inStepPolylines!.length - 1 > i; i++){
-        Polyline polyline = Polyline(
-          polylineId: PolylineId('polyline$i'),
-          points: [inStepPolylines[i],inStepPolylines[i+1]],
-          color: Colors.blue,
-          width: 5
-        );
-        polylinesInStep.add(polyline);
-      }
-      print(polylinesInStep);
-    }
-    return polylinesInStep;
-  }
-
-  // for editing polyines
-  void _showMapPolylines(BuildContext context){
-    // print("show map polylines");
-    showDialog(
-      context: context, 
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(20.0),
-        insetAnimationCurve: Curves.fastEaseInToSlowEaseOut,
-        insetAnimationDuration: const Duration(milliseconds: 300),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15.0),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 450,
-          child: MapForPolylines(
-            polyline: _convertListToPolyline(),
-          ),
-        ),
-      ));
-  }
+  //for editing polyines
+  // void _showMapPolylines(BuildContext context){
+  //   showDialog(
+  //     context: context, 
+  //     builder: (context) => Dialog(
+  //       child: SizedBox(
+  //         width: double.infinity,
+  //         height: 300,
+  //         child: MapForPolylines(
+  //           pointA: pinnedLocations[currentPageTracker -1],
+  //           pointB:  pinnedLocations[currentPageTracker],
+  //         ),
+  //       ),
+  //     ));
+  // }
   void _showDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -1162,8 +987,8 @@ class _Page1State extends State<Page1> {
                           },
                           style: const TextStyle(fontSize: 14),
                       ),
-                      ),
-                      ),
+                                        ),
+                                      ),
                     ),
                     const Padding(
                       padding: EdgeInsets.only( top:8.0, bottom: 8.0, left: 15),
@@ -1540,7 +1365,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                 const SizedBox(height: 2),
                 SizedBox(
                   width: double.infinity,
-                  height: 47,
+                  height: 55,
                   child: TextFormField(
                     controller: locationName_controller,
                     maxLength: 50,
@@ -1550,7 +1375,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 15),
+                          vertical: 10, horizontal: 15),
                       hintText: 'Type here...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5),
@@ -1573,7 +1398,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                       }
                       return null;  // You can add more validations as needed
                       },
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(fontSize: 14),
                   ),
                 ),
                 const Text(
@@ -1587,7 +1412,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                 const SizedBox(height: 2),
                 SizedBox(
                   width: double.infinity,
-                  height: 47,
+                  height: 55,
                   child: TextFormField(
                     controller: landmarkName_controller,
                     maxLength: 50,
@@ -1597,7 +1422,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 10),
+                          vertical: 10, horizontal: 10),
                       hintText: 'Optional',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5),
@@ -1614,7 +1439,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                         ),
                       ),
                     ),
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: 14),
                   ),            
                 ),
                 const Text(
@@ -1635,7 +1460,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
-                    vertical: 5, horizontal: 15),
+                    vertical: 10, horizontal: 15),
                     hintText: 'Type here...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(5),
@@ -1658,7 +1483,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                     }
                     return null;  // You can add more validations as needed
                   },
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 14),
                 ),
                 
                 Column(
@@ -1752,7 +1577,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                     children: [
                       if (allIsNotEmpty)
                       Container(
-                        padding: const EdgeInsets.only(left: 6.0),
+                        padding: const EdgeInsets.only(left: 16.0),
                         alignment: Alignment.centerLeft,
                         child: const Text(
                           'What is the next step?',
@@ -1768,7 +1593,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                         children: [
                           Container(
                             margin: const EdgeInsets.only(
-                              right: 5),
+                              right: 5, top: 10, bottom: 10),
                             child: ElevatedButton(
                               onPressed: () {
                                 onClick_check('walk');
@@ -1786,7 +1611,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                           ),
                           Container(
                             margin: const EdgeInsets.only(
-                                left: 5, right: 5),
+                                left: 5, right: 5, top: 10, bottom: 10),
                             child: ElevatedButton(
                               onPressed: () {
                                 onClick_check('ride');
@@ -1802,7 +1627,7 @@ class _WalkWidgetState extends State<WalkWidget> {
                           ),
                           Container(
                             margin: const EdgeInsets.only(
-                                left: 5, right: 5),
+                                left: 5, right: 5, top: 10, bottom: 10),
                             child: ElevatedButton(
                               onPressed: () {
                                 insertToDataManager();
@@ -2216,7 +2041,7 @@ class _RideWidgetState extends State<RideWidget> {
                           const SizedBox(height: 2),
                           SizedBox(
                             width: double.infinity,
-                            height: 32,
+                            height: 55,
                             child: TextFormField(
                               controller: fare_controller,
                               keyboardType: TextInputType.number,  // Set keyboard type for numeric input
@@ -2226,7 +2051,7 @@ class _RideWidgetState extends State<RideWidget> {
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                                 hintText: 'Type here...',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(5),
@@ -2249,7 +2074,7 @@ class _RideWidgetState extends State<RideWidget> {
                                 }
                                 return null;  // You can add more validations as needed
                               },
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -2264,7 +2089,7 @@ class _RideWidgetState extends State<RideWidget> {
                           const SizedBox(height: 2),
                           SizedBox(
                             width: double.infinity,
-                            height: 47,
+                            height: 55,
                             child: TextFormField(
                               controller: locationName_controller,
                               maxLength: 50,
@@ -2274,7 +2099,7 @@ class _RideWidgetState extends State<RideWidget> {
                                 filled: true,
                                 fillColor: Colors.white,
                                 contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 5, horizontal: 15),
+                                    vertical: 10, horizontal: 15),
                                 hintText: 'Type here...',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(5),
@@ -2295,9 +2120,9 @@ class _RideWidgetState extends State<RideWidget> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter the location name';
                                 }
-                                return null;  
+                                return null;  // You can add more validations as needed
                               },
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ),
                           const Text(
@@ -2311,7 +2136,7 @@ class _RideWidgetState extends State<RideWidget> {
                           const SizedBox(height: 2),
                           SizedBox(
                             width: double.infinity,
-                            height: 47,
+                            height: 55,
                             child: TextFormField(
                               controller: landmarkName_controller,
                               maxLength: 50,
@@ -2321,7 +2146,7 @@ class _RideWidgetState extends State<RideWidget> {
                                 filled: true,
                                 fillColor: Colors.white,
                                 contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 5, horizontal: 10),
+                                    vertical: 10, horizontal: 10),
                                 hintText: 'Optional',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(5),
@@ -2338,7 +2163,7 @@ class _RideWidgetState extends State<RideWidget> {
                                   ),
                                 ),
                               ),
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 14),
                             ),
                             
                           ),
@@ -2360,7 +2185,7 @@ class _RideWidgetState extends State<RideWidget> {
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: const EdgeInsets.symmetric(
-                              vertical: 0, horizontal: 10),
+                              vertical: 10, horizontal: 10),
                               hintText: 'Type here...',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(5),
@@ -2383,7 +2208,7 @@ class _RideWidgetState extends State<RideWidget> {
                                 }
                                 return null;  // You can add more validations as needed
                               },
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ],
                       ),
@@ -2480,7 +2305,7 @@ class _RideWidgetState extends State<RideWidget> {
                         children: [
                           // if (allIsNotEmpty)
                           Container(
-                            // margin: const EdgeInsets.only(top: 10.0),
+                            margin: const EdgeInsets.only(top: 10.0),
                             padding: const EdgeInsets.only(left: 16.0),
                             alignment: Alignment.centerLeft,
                             child: const Text(
@@ -2499,7 +2324,7 @@ class _RideWidgetState extends State<RideWidget> {
                           children: [
                             Container(
                               margin: const EdgeInsets.only(
-                                right: 5),
+                                right: 5, top: 10, bottom: 10),
                               child: ElevatedButton(
                                 onPressed: () {
                                   onClick_check('walk');
@@ -2514,7 +2339,7 @@ class _RideWidgetState extends State<RideWidget> {
                             ),
                             Container(
                               margin: const EdgeInsets.only(
-                                  left: 5, right: 5),
+                                  left: 5, right: 5, top: 10, bottom: 10),
                               child: ElevatedButton(
                                 onPressed: () {
                                   onClick_check('ride');
@@ -2529,7 +2354,7 @@ class _RideWidgetState extends State<RideWidget> {
                             ),
                             Container(
                               margin: const EdgeInsets.only(
-                                  left: 5, right: 5),
+                                  left: 5, right: 5, top: 10, bottom: 10),
                               child: ElevatedButton(
                                 onPressed: () {
                                   insertToDataManager();
@@ -3053,11 +2878,7 @@ class DataManager{
     //if momodify lang yung pin and complete na yung steps
     //location data: [address, lat,long]
     stepsMap[stepNumber]![0] = step;
-    stepsMap[stepNumber]![1][0] = locationData[0];
-    stepsMap[stepNumber]![1][1] = locationData[1];
-    stepsMap[stepNumber]![1][2] = locationData[2];
-    
-
+    stepsMap[stepNumber]![1] = locationData;
   }
   else{
     //if new
@@ -3157,51 +2978,15 @@ class DataManager{
   // }
 
   
-Map<int,List<LatLng>> polyline_points_map = {};
-Map<int,List<LatLng>> polyline_points = {};
+Map<int,List<LatLng>> polyline_coordinates_map = {};
 // okay na polylines, storing na
 void insert_decodedPolyline_ToDM(List<LatLng> polylinepoints){
-  polyline_points_map[stepNumber] = polylinepoints;
-  print("needed polyline points added to DM");
-  print('update neeeded polyline points: $polyline_points_map');
-  // print(polyline_points_map.length);
-  // if(polyline_points_map.containsKey(stepNumber) && polyline_points_map.isNotEmpty && polyline_points_map.length > stepNumber -1){
-  //   // this is to update the next point from current point
-  //   polyline_points_map[stepNumber+1]![0] = polylinepoints[1];
-  //   if(stepNumber > 0){
-  //     // this is to update previous point from the current point
-  //     int lengthOfList = polyline_points_map[stepNumber-1]!.length;//get the length of the list<LatLng>
-  //     polyline_points_map[stepNumber-1]![lengthOfList-1] = polylinepoints[0];
-  //   }
-  // }
-  // print('Polyline points: $polyline_points_map');
+  polyline_coordinates_map[stepNumber] = polylinepoints;
+  print("polyline points added to DM");
+  print('update: $polyline_coordinates_map');
+  print(polyline_coordinates_map.length);
 }
-Map<int, List<LatLng>> step_midpoints = {};
-void insert_midpoint(int pageTracker, List<LatLng> midpoint, bool notChanged){
-  if(notChanged){
-    step_midpoints[pageTracker] = midpoint;
-  }
-  else{
-    // if changed, galing sa mapForPolylines
-    mainwidget.updatePolylineFromChange(midpoint);
-    // midpoint.removeAt(0);
-    // midpoint.removeLast();
-    step_midpoints[pageTracker] = midpoint;
 
-    //update polyline
-  }
-  
-  print('insert midpoint: $step_midpoints');
-}
-void insert_AllDecodedPolyline_ToDM(List<LatLng> polylinepoints){
-  polyline_points[stepNumber] = polylinepoints;
-  print("needed polyline points added to DM");
-  print('update All Polylines Points: $polyline_points');
-
-}
-List<LatLng> get_AllDecodedPolylines(){
-  return polyline_points[stepNumber]!;
-}
 void insertDetailsToDB() async {
   List<dynamic> origin = stepsMap.entries.first.value[1];
   List<dynamic> destination = stepsMap.entries.last.value[1];
@@ -3215,8 +3000,8 @@ void insertDetailsToDB() async {
     'address': origin[0],
     'longitude': origin[1].toString(),
     'latitude': origin[2].toString(),
-    'user_id': '1', 
-    'location_type_id': '3', 
+    'user_id': '1', // Replace with actual user ID
+    'location_type_id': '3', // Replace with actual type
   };
 
   Map<String, String> destinationData = {
@@ -3225,8 +3010,8 @@ void insertDetailsToDB() async {
     'destination_address': destination[0],
     'destination_longitude': destination[1].toString(),
     'destination_latitude': destination[2].toString(),
-    'user_id': '1', 
-    'location_type_id': '3', 
+    'user_id': '1', // Replace with actual user ID
+    'location_type_id': '3', // Replace with actual type
   };
 
   // convert stepsMap to JSON format
@@ -3242,56 +3027,44 @@ void insertDetailsToDB() async {
       stepData[2] = stepData[2].map((item) => item.toString()).toList();
     }
   }
-  Map<String, dynamic> stringKeyStepsPoly = step_midpoints.map((key, value) {
-    return MapEntry(key.toString(), value);
-  });
-  for (var key in stringKeyStepsPoly.keys) {
-    var stepData = stringKeyStepsPoly[key];
-    if (stepData[1] is List) {
-      stepData[1] = stepData[1].map((item) => item.toString()).toList();
+ List<List<double>> convert_polylinePointsLatitudeJson(Map<int, List<LatLng>> map) {
+  List<List<double>> latitudesList = [];
+  // List<List<double>> longitudesList = [];
+
+  for (var points in map.values) {
+    List<double> latitudes = [];
+    // List<double> longitudes = [];
+
+    for (var latLng in points) {
+      latitudes.add(latLng.latitude);
+      // longitudes.add(latLng.longitude);
     }
-    if (stepData.length > 2 && stepData[2] is List) {
-      stepData[2] = stepData[2].map((item) => item.toString()).toList();
-    }
+
+    latitudesList.add(latitudes);
+    // longitudesList.add(longitudes);
   }
-//  List<List<double>> convert_polylinePointsLatitudeJson(Map<int, List<LatLng>> map) {
-//   List<List<double>> latitudesList = [];
-//   // List<List<double>> longitudesList = [];
 
-//   map.values.forEach((points) {
-//     List<double> latitudes = [];
-//     // List<double> longitudes = [];
+  return latitudesList;
+}
+List<List<double>> convert_polylinePointsLongitudeJson(Map<int, List<LatLng>> map) {
+  // List<List<double>> latitudesList = [];
+  List<List<double>> longitudesList = [];
 
-//     for (var latLng in points) {
-//       latitudes.add(latLng.latitude);
-//       // longitudes.add(latLng.longitude);
-//     }
+  for (var points in map.values) {
+    // List<double> latitudes = [];
+    List<double> longitudes = [];
 
-//     latitudesList.add(latitudes);
-//     // longitudesList.add(longitudes);
-//   });
-
-//   return latitudesList;
-// }
-// List<List<double>> convert_polylinePointsLongitudeJson(Map<int, List<LatLng>> map) {
-//   // List<List<double>> latitudesList = [];
-//   List<List<double>> longitudesList = [];
-
-//   map.values.forEach((points) {
-//     // List<double> latitudes = [];
-//     List<double> longitudes = [];
-
-//     for (var latLng in points) {
-//       longitudes.add(latLng.longitude);
+    for (var latLng in points) {
+      longitudes.add(latLng.longitude);
       
-//     }
+    }
 
-//     // latitudesList.add(latitudes);
-//     longitudesList.add(longitudes);
-//   });
+    // latitudesList.add(latitudes);
+    longitudesList.add(longitudes);
+  }
 
-//   return longitudesList;
-// }
+  return longitudesList;
+}
 
 
 
@@ -3311,14 +3084,13 @@ void insertDetailsToDB() async {
 
   try {
     String stepsMapJson = jsonEncode(stringKeyStepsMap);
-    String stepspolyMap = jsonEncode(stringKeyStepsPoly);
     // var polylinePointsJson = jsonEncode(convert_polylinePointsJson(polyline_coordinates_map));
-    // var polyline_latitudePointsJson = jsonEncode(convert_polylinePointsLatitudeJson(polyline_coordinates_map));
-    // var polyline_longitudePointsJson = jsonEncode(convert_polylinePointsLongitudeJson(polyline_coordinates_map));
+    var polylineLatitudepointsjson = jsonEncode(convert_polylinePointsLatitudeJson(polyline_coordinates_map));
+    var polylineLongitudepointsjson = jsonEncode(convert_polylinePointsLongitudeJson(polyline_coordinates_map));
     
     print(stepsMapJson);
-    // print(polyline_latitudePointsJson);
-    // print(polyline_longitudePointsJson);
+    print(polylineLatitudepointsjson);
+    print(polylineLongitudepointsjson);
     //try to send origin,destination, and stepsMapJson to php
     final response = await http.post(
       Uri.parse(url),
@@ -3328,9 +3100,8 @@ void insertDetailsToDB() async {
       body: {...originData,
        ...destinationData,
        'steps_map': stepsMapJson,
-       'steps-poly': stepspolyMap},
-      //  'lat_polyline_points' : polyline_latitudePointsJson,
-      //  'long_polyline_points' : polyline_longitudePointsJson},
+       'lat_polyline_points' : polylineLatitudepointsjson,
+       'long_polyline_points' : polylineLongitudepointsjson},
     );
 
     if (response.statusCode == 200) {
@@ -3683,7 +3454,16 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
                           ],
                         ),
                       ),
-                    )                              
+                    )
+                    // else if(stepType == 'walk')
+                    // Container(
+          
+                    // )
+                    // else if(stepType == 'ride')
+                    // Container(
+                      
+                    // )
+          
                   ],
                 ),
               );
@@ -3698,12 +3478,7 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
               padding: const EdgeInsets.all(16.0),
               child: TextButton(
                 onPressed: () {
-                  DataManager().insertDetailsToDB();
-                    
-                    // print(data[1]['username']); 
-                    Navigator.of(context).pop();
-                    //method for data insertion
-                    Navigator.of(context).pop();
+                  
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -3719,16 +3494,120 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
     );
   }
 }
-class PinnedLocation {
-  final LatLng origin;
-  final LatLng destination;
-  final LatLng midpoint;
-  final List<LatLng> polylinePoints; 
 
-  PinnedLocation({
-    required this.origin,
-    required this.destination,
-    required this.midpoint,
-    required this.polylinePoints,
-  });
-}
+
+
+
+//Walk widget
+ // Retrieve existing data for this page from DataManager if it exists
+    // var stepDetails = DataManager().get_ExistingStepDetails();
+    // if (stepDetails != null && stepDetails.length >= 3) {
+    //   // Populate controllers with existing data
+    //   locationName_controller.text = stepDetails[0];
+    //   landmarkName_controller.text = stepDetails[1];
+    //   instructions_controller.text = stepDetails[2];
+    // }
+    // Add listeners to save data back to DataManager as the user types
+    // locationName_controller.addListener(_saveChangesToDataManager);
+    // landmarkName_controller.addListener(_saveChangesToDataManager);
+    // instructions_controller.addListener(_saveChangesToDataManager);
+
+    // Add listener to check if all fields are filled
+   
+
+
+    // locationName_controller.addListener(notEmptyChecker);
+    // instructions_controller.addListener(notEmptyChecker);
+  
+    // // if(DataManager().stepChecker() == true){
+    // //   List<dynamic> stepDetails = DataManager().getStepsInformation();
+    // //  print(stepDetails);
+    // //  if(stepDetails.length == 3){
+    // //   setState(() {
+    // //    locationName_controller.text = stepDetails[2][0];
+    // //    landmarkName_controller.text = stepDetails[2][1];
+    // //    instructions_controller.text = stepDetails[2][2];
+    // //  });
+    // //  }
+     
+    // // } 
+    // // if(DataManager().getStepsMap()[DataManager().getCountTrackers()[0]]!.length == 3){
+    // //   locationName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][0] = locationName_controller.text;
+    // //     });
+    // //     landmarkName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][1] = locationName_controller.text;
+    // //     });
+    // //     instructions_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][2] = instructions_controller.text;
+    // //     });
+    // // }
+    
+    // // //for existing step
+    // // if(DataManager().get_ExistingStepDetails() != null){
+    // //   List<dynamic> originDetails = DataManager().get_ExistingStepDetails()!;
+    // //   //exameple: [locatiion_name,landmark, instructions]
+    // //   setState(() {
+    // //     locationName_controller.text = originDetails[0];
+    // //     landmarkName_controller.text = originDetails[1];
+    // //     instructions_controller.text = originDetails[2];
+          
+    // //     //for displaying the existing next step
+    // //     if(DataManager().get_nextButton() != null){
+    // //       nextButton = DataManager().get_nextButton()!;
+    // //       hasNextStep = true;
+    // //     }
+    // //     else{
+    // //       hasNextStep = false;
+    // //     }
+        
+    // //   });
+      
+    // // }else{
+    // //   print('error fetching data: ${DataManager().get_ExistingStepDetails()}');
+    // // }
+    // // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    // //   print('contains key = true');
+    // //   locationName_controller.clear();
+    // //     landmarkName_controller.clear();
+    // //     instructions_controller.clear();
+    // //     hasNextStep = false;
+    // //     nextButton = '';
+    // //     print('clear!');
+    // //   // if(DataManager().getStepsMap()[DataManager().getCurrentPageTracker()]!.length == 2){
+        
+    // //   // }
+    // //   if(DataManager().getStepsMap().length > DataManager().getCurrentPageTracker()){
+    // //   List<dynamic> stepDetails = DataManager().getValueInStepsMap();
+    // //   print('step Details: $stepDetails');
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   if(stepDetails.length == 3){ //has walk, location details, and step details
+    // //     setState(() {
+    // //       locationName_controller.text = stepDetails[2][0];
+    // //       landmarkName_controller.text = stepDetails[2][1];
+    // //       instructions_controller.text = stepDetails[2][2];
+    // //       nextButton = DataManager().getStepsMap()[DataManager().getCurrentPageTracker() +1]![0];
+    // //       // print('next Button: $nextButton');
+    // //       hasNextStep = true;
+    // //       print('update!');
+          
+    // //     });
+        
+        
+
+    // //     //get the next step for the button
+
+    // //   }
+      
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   }
+    // // }
+    // print('walk add - - - - - -- -- - - - ');
+    
+    // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    //   if(DataManager().getValueInStepsMap().length == 3){
+    //     locationName_controller.text = DataManager().get_ExistingStepDetails()![0];
+    //     landmarkName_controller.text = DataManager().get_ExistingStepDetails()![1];
+    //     instructions_controller.text = DataManager().get_ExistingStepDetails()![2];
+    //   }
+    // }

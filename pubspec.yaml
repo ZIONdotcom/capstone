@@ -50,6 +50,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   uuid: ^4.4.2
   
+  
 
   google_maps_webservice: any
   provider: any

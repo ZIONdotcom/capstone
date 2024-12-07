@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -23,12 +24,25 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
   Marker? _pinnedMarker;
   String? _address;
   String? selectedMode;
+  String currentPage = '';
   String selectedLocation = 'Search location';
+  LatLng? pinnedLocation_LatLng;
+  final Set<Marker>_markers = {};
+
+ final GlobalKey<FormState> _firstFormKey = GlobalKey<FormState>();
+ final GlobalKey<FormState> _establishmentFormKey = GlobalKey<FormState>();
+ final GlobalKey<FormState> _terminalFormKey = GlobalKey<FormState>();
+
 
   final bool _showEstablishment = false;
   bool _showOptions = false; // To control visibility of widgets
   bool buttonClicked = false;
   List<double> sheetSizes = [0.25,0.1,0.25];
+  List<Widget> pages = [];
+  int? pageTracker;
+  List<dynamic> locations = [];
+  late BitmapDescriptor establishmentIcon;
+  late BitmapDescriptor terminalIcon;
   
 
 
@@ -38,7 +52,17 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showDialog(context);
     });
+      pages = [
+    BuildFirst(onNewPage: pageControl, formKey: _firstFormKey),
+    BuildEstablishment(onNewPage: pageControl, formKey: _establishmentFormKey),
+    BuildTerminal(onNewPage: pageControl, formKey: _terminalFormKey),
+  ];
+  pageTracker = 0;
+  _loadCustomIcons();
+  _fetchLocationData();
   }
+
+  
 
   @override
   void dispose() {
@@ -46,24 +70,99 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
     super.dispose();
   }
 
-  void changeSheetSize(
-      double initialSize, double minChildSize, double maxChildSize) {
+  Future<BitmapDescriptor> _loadCustomIcon(String assetPath) async {
+  try {
+    final ByteData byteData = await rootBundle.load(assetPath);
+    final Uint8List uint8List = byteData.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(uint8List);
+  } catch (e) {
+    print('Error loading icon: $e');
+    return BitmapDescriptor.defaultMarker;
+  }
+}
+
+void _loadCustomIcons() async {
+  // Load the custom icons using _loadCustomIcon
+  establishmentIcon = await _loadCustomIcon('assets/icons/establishment_marker.png');
+  terminalIcon = await _loadCustomIcon('assets/icons/terminal_marker.png');
+}
+
+Future<void> _fetchLocationData() async {
+  final response = await http.get(Uri.parse('https://rutaco.online/get_locationForMap.php'));
+
+  if (response.statusCode == 200) {
     setState(() {
-      sheetSizes[0] = initialSize;
-      sheetSizes[1] = minChildSize;
-      sheetSizes[2] = maxChildSize;
+      locations = json.decode(response.body);
+    });
+  } else {
+    throw Exception('Failed to load data');
+  }
+
+  setState(() {
+    for (var data in locations) {
+      _markers.add(
+        Marker(
+          markerId: MarkerId(data['location_id']),
+          position: LatLng(double.parse(data['x_coordinate']), double.parse(data['y_coordinate'])),
+          // icon: ,
+          // icon: data['location_type_id'] == 1 ? terminalIcon : establishmentIcon,
+          infoWindow: InfoWindow(
+            title: data['location_name'],
+            snippet: data['location_type_id'] == '1' ? "Terminal" : "Establishment"
+          ),
+        ),
+      );
+    }
+  });
+}
+
+
+
+
+
+  void pageControl(String pagename) {
+    setState(() {
+      currentPage = pagename;
+      if (pagename == 'first') {
+        pageTracker = 0;
+        buttonClicked = false;
+      } else if (pagename == 'establishment') {
+        pageTracker = 1;
+        buttonClicked = true;
+      } else if (pagename == 'terminal') {
+        pageTracker = 2;
+        buttonClicked = true;
+      }
+      changeSheetSize();
+    });
+  }
+
+  void changeSheetSize() {
+    setState(() {
+      if(currentPage == 'first'){
+        sheetSizes[0] = 0.25;
+        sheetSizes[1] = 0.25;
+        sheetSizes[2] = 0.25;
+      }
+      else{
+        sheetSizes[0] = 0.55;
+        sheetSizes[1] = 0.5;
+        sheetSizes[2] = 0.55;
+      }
     });
   }
 
   void _addMarker(LatLng position) async {
     setState(() {
-      _pinnedMarker = Marker(
+      Marker pinnedMarker = Marker(
         markerId: const MarkerId('Pinned'),
         infoWindow: const InfoWindow(title: 'Pinned Location'),
         icon: BitmapDescriptor.defaultMarker,
         position: position,
       );
+      _markers.add(pinnedMarker);
       _showOptions = true;
+      pinnedLocation_LatLng = position;
     });
 
     //Fetch the address from coordinates
@@ -74,6 +173,7 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
       print('Address retrieval failed or is empty.');
     }
   }
+
 
   Future<void> _getAddress(LatLng position) async {
     try {
@@ -165,7 +265,8 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
               onMapCreated: (controller) {
                 _googleMapController = controller;
               },
-              markers: _pinnedMarker != null ? {_pinnedMarker!} : {},
+              markers: _markers,
+              // markers: _pinnedMarker != null ? {_pinnedMarker!} : {},
               onTap: _addMarker,
             ),
           ),
@@ -208,7 +309,7 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
                       });
                     }
                   },
-                  readOnly: true, // Make TextFormField non-editable
+                  readOnly: true, //Make TextFormField non-editable
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.white,
@@ -234,6 +335,8 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
               maxChildSize: sheetSizes[2],
               builder:
                   (BuildContext context, ScrollController scrollController) {
+                    final screenHeight = MediaQuery.of(context).size.height;
+                    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom; // To check if the keyboard is visible
                 return ClipRRect(
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20.0),
@@ -249,75 +352,126 @@ class SuggestPinLocationState extends State<SuggestPinLocation> {
                         ),
                       ],
                     ),
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            children: [
-                              Container(
-                                margin:
-                                    const EdgeInsets.only(top: 5, bottom: 15),
-                                width: 60,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 5.0),
+                          child: Stack(
+                           alignment: Alignment.center,
+                           children: [
+                            if(buttonClicked)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                IconButton(
+                                  onPressed: (){
+                                    setState(() {
+                                      buttonClicked = false;
+                                      pageControl('first');
+                                    });
+                                  }, 
+                                  icon: const Icon(Icons.arrow_back, size: 24),
+                                ),
+                              ],
+                            ),
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: Container(
+                                width: 50,
                                 height: 6,
                                 decoration: BoxDecoration(
                                   color: Colors.grey,
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
-                              Navigator(
-                                onGenerateRoute: (RouteSettings settings) {
-                                  Widget page;
-                                  if (settings.name == '/terminal') {
-                                    page = const BuildTerminal();
-                                    changeSheetSize(0.5, 0.1, 0.5);
-                                  } else if (settings.name ==
-                                      '/establishment') {
-                                    page = const BuildEstablishment();
-                                    changeSheetSize(0.55, 0.2, 0.55);
-                                  } else {
-                                    page = const BuildFirst();
-                                  }
-                                  return MaterialPageRoute(
-                                      builder: (context) => FadeTransition(
-                                            opacity: Tween(begin: 1.0, end: 2.0)
-                                                .animate(CurvedAnimation(
-                                                    parent:
-                                                        ModalRoute.of(context)!
-                                                            .animation!,
-                                                    curve: Curves.easeIn)),
-                                            child: page,
-                                          ));
-                                  // return MaterialPageRoute(
-                                  //   builder: (context){
-                                  //     return const BuildFirst();
-                                  //   }
-                                  // );
-                                },
-                              ),
-                            ],
-                          )),
+                            )
+                           ], 
+                          )
+                        ),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            controller: scrollController,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: buttonClicked  == false ? 80 : screenHeight - keyboardHeight - 460,
+                                  child: pages[pageTracker!],
+                                )
+
+
+
+                                // Navigator(
+                                //   onGenerateRoute: (RouteSettings settings) {
+                                //     Widget page;
+                                //     if (settings.name == '/terminal') {
+                                //       page = const BuildTerminal();
+                                //       changeSheetSize(0.5, 0.1, 0.5);
+                                //     } else if (settings.name ==
+                                //         '/establishment') {
+                                //       page = const BuildEstablishment();
+                                //       changeSheetSize(0.55, 0.2, 0.55);
+                                //     } else {
+                                //       page = const BuildFirst();
+                                //     }
+                                //     return MaterialPageRoute(
+                                //         builder: (context) => FadeTransition(
+                                //               opacity: Tween(begin: 1.0, end: 2.0)
+                                //                   .animate(CurvedAnimation(
+                                //                       parent:
+                                //                           ModalRoute.of(context)!
+                                //                               .animation!,
+                                //                       curve: Curves.easeIn)),
+                                //               child: page,
+                                //             ));
+                                //     // return MaterialPageRoute(
+                                //     //   builder: (context){
+                                //     //     return const BuildFirst();
+                                //     //   }
+                                //     // );
+                                //   },
+                                // ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
               },
             ),
+            Positioned(
+              top: 45,
+              right: 20,
+              child: FloatingActionButton(
+                onPressed: pinnedLocation_LatLng != null
+                  ? () => _googleMapController.animateCamera(
+                      CameraUpdate.newLatLngZoom(pinnedLocation_LatLng!, 17.0),
+                    )
+                  : null,
+                backgroundColor: Colors.white,
+                child: const Icon(Icons.location_searching_rounded),
+              ),
+            ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        onPressed: () => _googleMapController.animateCamera(
-          CameraUpdate.newCameraPosition(_initialCameraPosition),
-        ),
-        child: const Icon(Icons.center_focus_strong),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: Colors.white,
+      //   foregroundColor: Colors.black,
+      //   onPressed: () => _googleMapController.animateCamera(
+      //     CameraUpdate.newCameraPosition(_initialCameraPosition),
+      //   ),
+      //   child: const Icon(Icons.center_focus_strong),
+      // ),
     );
   }
 }
 
 class BuildFirst extends StatefulWidget {
-  const BuildFirst({super.key});
+final Function(String) onNewPage;
+final GlobalKey<FormState> formKey;
+  const BuildFirst({super.key,required this.onNewPage,required this.formKey});
 
   @override
   State<BuildFirst> createState() => _BuildFirstState();
@@ -350,8 +504,7 @@ class _BuildFirstState extends State<BuildFirst> {
                 children: [
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.of(context).pushNamed('/establishment');
+                      widget.onNewPage('establishment');
                     },
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
@@ -369,8 +522,7 @@ class _BuildFirstState extends State<BuildFirst> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.of(context).pushNamed('/terminal');
+                      widget.onNewPage('terminal');
                     },
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
@@ -397,7 +549,9 @@ class _BuildFirstState extends State<BuildFirst> {
 }
 
 class BuildTerminal extends StatefulWidget {
-  const BuildTerminal({super.key});
+  final Function(String) onNewPage;
+  final GlobalKey<FormState> formKey;
+  const BuildTerminal({super.key,required this.onNewPage,required this.formKey});
 
   @override
   State<BuildTerminal> createState() => _BuildTerminalState();
@@ -427,7 +581,7 @@ class _BuildTerminalState extends State<BuildTerminal> {
     if (mounted) {
     if (mounted) {
       setState(() {
-        images = selectedImages; // Update the state with the selected images
+        images = selectedImages; //Update the state with the selected images
       });
     }
   }
@@ -514,17 +668,17 @@ class _BuildTerminalState extends State<BuildTerminal> {
         //   ),
         Row(
           children: [
-            Container(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () {
-                  passData();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pushNamed('/');
-                },
-                icon: const Icon(Icons.arrow_back),
-              ),
-            ),
+            // Container(
+            //   alignment: Alignment.centerLeft,
+            //   child: IconButton(
+            //     onPressed: () {
+            //       passData();
+            //       Navigator.of(context).pop();
+            //       Navigator.of(context).pushNamed('/');
+            //     },
+            //     icon: const Icon(Icons.arrow_back),
+            //   ),
+            // ),
             Container(
               padding: const EdgeInsets.only(top: 6),
               alignment: Alignment.center,
@@ -899,7 +1053,9 @@ class _BuildTerminalState extends State<BuildTerminal> {
 }
 
 class BuildEstablishment extends StatefulWidget {
-  const BuildEstablishment({super.key});
+  final Function(String) onNewPage;
+  final GlobalKey<FormState> formKey;
+  const BuildEstablishment({super.key, required this.onNewPage,required this.formKey});
 
   @override
   State<BuildEstablishment> createState() => _BuildEstablishmentState();
@@ -993,74 +1149,67 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          children: [
-            Container(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () {
-                  passData();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pushNamed('/');
-                },
-                icon: const Icon(Icons.arrow_back),
-              ),
+        Container(
+          padding: const EdgeInsets.only(top: 6),
+          alignment: Alignment.center,
+          child: const Text(
+            'What is this establishment called?',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
-            Container(
-              padding: const EdgeInsets.only(top: 6),
-              alignment: Alignment.center,
-              child: const Text(
-                'What is this establishment called?',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        const SizedBox(height: 3),
+        Padding(
+          padding: const EdgeInsets.only(left: 15.0,right: 15.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: Form(
+              key: widget.formKey,
+              child: TextFormField(
+                controller: establishmentController,
+                maxLength: 50,
+                maxLines: 1,
+                minLines: 1,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 15),
+                    hintText: 'Type here...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5),
+                        borderSide: const BorderSide(
+                          color: Color.fromARGB(255, 255, 255, 255),
+                          width: 1.5,
+                        ),
+                      ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      borderSide: const BorderSide(
+                        color: Color.fromARGB(255, 76, 174, 255),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the establishment name';
+                    }
+                    return null;  // You can add more validations as needed
+                  },
+                  style: const TextStyle(fontSize: 13),
                 ),
               ),
             ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-        Container(
-          margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-          height: 37,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(5),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xff1D1617).withOpacity(0.11),
-                blurRadius: 4,
-                spreadRadius: 0.0,
-              ),
-            ],
           ),
-          child: TextFormField(
-            controller: establishmentController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              hintText: 'Type here...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(5),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            validator: (value) {
-              if (value!.isEmpty) {
-                return "Fill out this field";
-              } else {
-                return null;
-              }
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
+        
         Container(
-          padding: const EdgeInsets.only(top: 6, left: 8),
+          padding: const EdgeInsets.only(top: 4, left: 8),
           alignment: Alignment.centerLeft,
           child: const Text(
             'Landmark: (optional)',
@@ -1072,37 +1221,49 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          margin: const EdgeInsets.only(right: 20.0, left: 20.0),
-          height: 37,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(5),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xff1D1617).withOpacity(0.11),
-                blurRadius: 4,
-                spreadRadius: 0.0,
-              ),
-            ],
-          ),
-          child: TextFormField(
-            controller: landmarkController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              hintText: 'Type here...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(5),
-                borderSide: BorderSide.none,
+        Padding(
+          padding: const EdgeInsets.only(left: 15.0,right: 15.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: TextFormField(
+              controller: landmarkController,
+              maxLength: 50,
+              maxLines: 1,
+              minLines: 1,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10, horizontal: 15),
+                  hintText: 'Type here...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                      borderSide: const BorderSide(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        width: 1.5,
+                      ),
+                    ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: const BorderSide(
+                      color: Color.fromARGB(255, 76, 174, 255),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                // validator: (value) {
+                //   if (value == null || value.isEmpty) {
+                //     return 'Please enter the establishment name';
+                //   }
+                //   return null;  // You can add more validations as needed
+                // },
+                style: const TextStyle(fontSize: 13),
               ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 20),
+    
         //ImagePickerButton(),
         Container(
           padding: const EdgeInsets.only(left: 16.0),
@@ -1118,7 +1279,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        // const SizedBox(height: 10),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -1147,7 +1308,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
               //   },
               //   icon: const Icon(Icons.add_a_photo_outlined,size: 30)
               //   ),
-              const SizedBox(width: 10),
+              // const SizedBox(width: 10),
               if (images.isNotEmpty)
                 Wrap(
                   spacing: 5,
@@ -1177,6 +1338,9 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
         const SizedBox(height: 10),
         ElevatedButton(
           onPressed: () {
+            if(widget.formKey.currentState?.validate() ?? false){
+
+            }
             if (establishmentController.text.isNotEmpty && images.isNotEmpty) {
               showDialog(
                 context: context,
@@ -1191,6 +1355,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
                         TextButton(
                           child: const Text('OK'),
                           onPressed: () {
+                            
                             passData();
                             LocationInformation().uploadImages();
                             _clearAll();
@@ -1210,7 +1375,15 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
                   );
                 },
               );
-            } else {
+            }else if (establishmentController.text.isNotEmpty && images.isEmpty){
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please insert an image.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }  
+            else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Please fill out all fields.'),
@@ -1233,6 +1406,7 @@ class _BuildEstablishmentState extends State<BuildEstablishment> {
 
 class LocationInformation {
   static final LocationInformation _instance = LocationInformation._internal();
+  
 
   factory LocationInformation() {
     return _instance;
@@ -1245,6 +1419,7 @@ class LocationInformation {
   List<XFile> images = [];
   List<String> imagePaths = [];
   LatLng coordinates = const LatLng(0, 0);
+  
 
   Future<void> _uploadImages(List<XFile> images) async {
     if (images.isEmpty) return;
@@ -1311,41 +1486,40 @@ class LocationInformation {
       print("No images to upload.");
     }
   }
+void insertToDB() async {
+  String url = 'https://rutaco.online/insert_location_tbl.php';
+  locationType = (locationtype == 'terminal') ? 1 : 2;
 
-  void insertToDB() async {
-    String url = 'https://rutaco.online/insert_location_tbl.php';
-    switch (locationtype) {
-      case 'terminal':
-        locationType = 1;
-        break;
-      case 'establishment':
-        locationType = 2;
-        break;
-    }
+  Map<String, String> data = {
+    'landmark': landmark,
+    'location_name': locationName,
+    'address': address,
+    'user_id': '1',
+    'location_type_id': locationType.toString(),
+    'longitude': coordinates.longitude.toString(),
+    'latitude': coordinates.latitude.toString(),
+    'image_paths': imagePaths.join(',')
+  };
+  print("Request Data: $data");
 
-    var data = {
-      'landmark': landmark,
-      'location_name': locationName,
-      'address': address,
-      'user_id': '1',
-      'location_type_id': locationType.toString(),
-      'longitude': coordinates.longitude.toString(),
-      'latitude': coordinates.latitude.toString(),
-      'image_paths': imagePaths.join(',')
-    };
-
-    //Sending POST request
-    var response = await http.post(
+  try {
+    final response = await http.post(
       Uri.parse(url),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
       body: data,
     );
 
-    //Check the response from the server
     if (response.statusCode == 200) {
       print('Data inserted successfully: ${response.body}');
     } else {
-      print('Failed to insert data: ${response.statusCode}');
+      print('Failed to insert data: ${response.statusCode} | ${response.body}');
     }
+  } catch (e) {
+    print('Error during HTTP request: $e');
   }
+}
+
 }
 

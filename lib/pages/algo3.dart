@@ -1,11 +1,8 @@
-import 'dart:convert';
 import 'package:capstone/LegStepAlgo_model.dart';
-import 'package:capstone/terminal_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'searchpage.dart';
-import 'package:http/http.dart' as http;
 
 class algo3 extends StatefulWidget {
   @override
@@ -152,97 +149,95 @@ class ThirdScreenState extends State<algo3> {
     // Loop through each step and add polyline between sakayanLocation and babaanLocation
     for (int i = 0; i < steps.length; i++) {
       final step = steps[i];
-      if (step.babaanLocation != null) {
-        try {
-          print('step $i: sakayanLocation: ${step.sakayanLocation}');
-          print('step $i: babaanLocation: ${step.babaanLocation}');
-          print('step $i: routePoints: ${step.routePoints}');
+      try {
+        print('step $i: sakayanLocation: ${step.sakayanLocation}');
+        print('step $i: babaanLocation: ${step.babaanLocation}');
+        print('step $i: routePoints: ${step.routePoints}');
 
-          // Create a new list for polyline points, starting with sakayanLocation
-          List<LatLng> polylinePoints = [step.sakayanLocation];
+        // Create a new list for polyline points, starting with sakayanLocation
+        List<LatLng> polylinePoints = [step.sakayanLocation];
 
-          // Filter routePoints to include only those between sakayanLocation and babaanLocation
-          List<LatLng> filteredRoutePoints = [];
-          if (step.routePoints != null && step.routePoints.isNotEmpty) {
-            filteredRoutePoints = step.routePoints.where((point) {
-              return _isPointBetweenLocations(
-                  point, step.sakayanLocation, step.babaanLocation);
-            }).toList();
-          }
+        // Filter routePoints to include only those between sakayanLocation and babaanLocation
+        List<LatLng> filteredRoutePoints = [];
+        if (step.routePoints.isNotEmpty) {
+          filteredRoutePoints = step.routePoints.where((point) {
+            return _isPointBetweenLocations(
+                point, step.sakayanLocation, step.babaanLocation);
+          }).toList();
+        }
 
-          // Only add the filtered routePoints to the polylinePoints if there are any
-          if (filteredRoutePoints.isNotEmpty) {
-            polylinePoints.addAll(filteredRoutePoints);
-          }
+        // Only add the filtered routePoints to the polylinePoints if there are any
+        if (filteredRoutePoints.isNotEmpty) {
+          polylinePoints.addAll(filteredRoutePoints);
+        }
 
-          // Add babaanLocation at the end
-          polylinePoints.add(step.babaanLocation);
+        // Add babaanLocation at the end
+        polylinePoints.add(step.babaanLocation);
 
-          // Ensure no polyline is drawn if the points are just sakayanLocation and babaanLocation (i.e., no intermediate route points)
-          if (polylinePoints.length > 2) {
-            print('Final polyline points for step $i: $polylinePoints');
+        // Ensure no polyline is drawn if the points are just sakayanLocation and babaanLocation (i.e., no intermediate route points)
+        if (polylinePoints.length > 2) {
+          print('Final polyline points for step $i: $polylinePoints');
 
-            // Create the polyline using the polylinePoints list
-            final polyline = Polyline(
-              polylineId: PolylineId('route_$i'),
-              points:
-                  polylinePoints, // This now includes sakayanLocation, filtered routePoints, and babaanLocation
-              color: Colors.blue,
-              width: 5,
-            );
-
-            setState(() {
-              // _polylines.add(polyline);
-            });
-          }
-
-          // Add start and end markers for this route segment
-          final startMarker = Marker(
-            markerId: MarkerId('start_$i'),
-            position: step.sakayanLocation,
-            infoWindow: InfoWindow(title: 'Start: ${step.transportationName}'),
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          );
-
-          final endMarker = Marker(
-            markerId: MarkerId('end_$i'),
-            position: step.babaanLocation,
-            infoWindow: InfoWindow(title: 'End: ${step.transportationName}'),
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          );
-
-          // Add circles to highlight start and end locations
-          final startCircle = Circle(
-            circleId: CircleId('circleStart_$i'),
-            center: step.sakayanLocation,
-            radius: 50.0,
-            fillColor: Colors.blue.withOpacity(0.3),
-            strokeColor: Colors.blue,
-            strokeWidth: 2,
-          );
-
-          final endCircle = Circle(
-            circleId: CircleId('circleEnd_$i'),
-            center: step.babaanLocation,
-            radius: 50.0,
-            fillColor: Colors.red.withOpacity(0.3),
-            strokeColor: Colors.red,
-            strokeWidth: 2,
+          // Create the polyline using the polylinePoints list
+          final polyline = Polyline(
+            polylineId: PolylineId('route_$i'),
+            points:
+                polylinePoints, // This now includes sakayanLocation, filtered routePoints, and babaanLocation
+            color: Colors.blue,
+            width: 5,
           );
 
           setState(() {
-            _markers.add(startMarker);
-            _markers.add(endMarker);
-            _circles.add(startCircle);
-            _circles.add(endCircle);
+            // _polylines.add(polyline);
           });
-        } catch (e) {
-          print('Error fetching route polyline for step $i: $e');
         }
+
+        // Add start and end markers for this route segment
+        final startMarker = Marker(
+          markerId: MarkerId('start_$i'),
+          position: step.sakayanLocation,
+          infoWindow: InfoWindow(title: 'Start: ${step.transportationName}'),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        );
+
+        final endMarker = Marker(
+          markerId: MarkerId('end_$i'),
+          position: step.babaanLocation,
+          infoWindow: InfoWindow(title: 'End: ${step.transportationName}'),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        );
+
+        // Add circles to highlight start and end locations
+        final startCircle = Circle(
+          circleId: CircleId('circleStart_$i'),
+          center: step.sakayanLocation,
+          radius: 50.0,
+          fillColor: Colors.blue.withOpacity(0.3),
+          strokeColor: Colors.blue,
+          strokeWidth: 2,
+        );
+
+        final endCircle = Circle(
+          circleId: CircleId('circleEnd_$i'),
+          center: step.babaanLocation,
+          radius: 50.0,
+          fillColor: Colors.red.withOpacity(0.3),
+          strokeColor: Colors.red,
+          strokeWidth: 2,
+        );
+
+        setState(() {
+          _markers.add(startMarker);
+          _markers.add(endMarker);
+          _circles.add(startCircle);
+          _circles.add(endCircle);
+        });
+      } catch (e) {
+        print('Error fetching route polyline for step $i: $e');
       }
-    }
+        }
   }
 
 // Helper function to check if a point is between sakayanLocation and babaanLocation

@@ -7,13 +7,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'routeFinder.dart';
-import 'package:capstone/pages/routefinder3.dart';
-import 'package:capstone/pages/routeCreation.dart';
 import 'dart:math';
 import 'package:capstone/step_model.dart';
 import 'package:capstone/terminal_model.dart';
@@ -60,7 +55,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
   double routeProximityThreshold = 300.0;
   Queue<List<RouteSuggest>> queue = Queue();
   List<List<RouteSuggest>> allPaths = [];
-  Set<String> seenPaths = Set(); // To track unique paths
+  Set<String> seenPaths = {}; // To track unique paths
 
   List<PathDetail1> pathDetailsList1 = [];
 
@@ -744,7 +739,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         }
       }
     }
-    return LatLng(0.0, 0.0); // Default (error case)
+    return const LatLng(0.0, 0.0); // Default (error case)
   }
 
   LatLng findMeetingPointWithOrigin(RouteSuggest route, LatLng userOrigin) {
@@ -759,7 +754,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
   LatLng findClosestPointIfNear(
       List<LatLng> route1Coords, List<LatLng> route2Coords, double threshold) {
-    LatLng closestPoint = LatLng(0.0, 0.0);
+    LatLng closestPoint = const LatLng(0.0, 0.0);
     double minDistance = double.infinity;
 
     for (var coord1 in route1Coords) {
@@ -774,7 +769,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
     return minDistance < threshold
         ? closestPoint
-        : LatLng(0.0,
+        : const LatLng(0.0,
             0.0); // Return valid point if within threshold, otherwise (0,0)
   }
 
@@ -892,7 +887,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           if (calculateDistances(routePoint, destination) <=
               routeProximityThreshold) {
             paths.add(currentPath);
-            print("Path found to destination at ${routePoint}");
+            print("Path found to destination at $routePoint");
             return paths;
           }
         }
@@ -1366,10 +1361,10 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           'Unknown Establishment'; // Replace 'name' with the actual key
 
       print('establishemnt Nameeee: $sakayanName');
-    } else if (address != null && address.isNotEmpty) {
+    } else if (address.isNotEmpty) {
       sakayanName = address; // Use the address if establishment is null
       print('address Nameeee: $sakayanName');
-    } else if (landmarks != null && landmarks.isNotEmpty) {
+    } else if (landmarks.isNotEmpty) {
       sakayanName = landmarks.join(
           ', '); // Use landmarks if both establishment and address are null
       print('landmarks Nameeee: $sakayanName');
@@ -1610,6 +1605,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     }
   }
 
+  @override
   void initState() {
     super.initState();
     _controllerTo.text = widget.originName;
@@ -1726,11 +1722,11 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
                 _controllerTo.text.isNotEmpty)
               Expanded(
                 child: combinedRoutes.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: CircularProgressIndicator(),
                       ) // Show loading indicator if no routes are found yet
                     : allPaths.isEmpty
-                        ? Center(
+                        ? const Center(
                             child: Text("No route found"),
                           ) // Display "No route found" message if there are no paths
                         : FutureBuilder<List<List<TravelStep>>>(
@@ -1751,7 +1747,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
-                                return Center(
+                                return const Center(
                                   child: CircularProgressIndicator(),
                                 ); // Show loading indicator while waiting for data
                               } else if (snapshot.hasError) {
@@ -1805,7 +1801,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
                                   },
                                 );
                               } else {
-                                return Center(
+                                return const Center(
                                   child: Text("No route found"),
                                 ); // Display message if no data is returned
                               }
@@ -2100,9 +2096,9 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       onTap: () {
         setState(() {
           print("Steps Lengthsssss: ${steps.length}");
-          steps.forEach((step) {
+          for (var step in steps) {
             print("Step Laman: ${step.transportationName}");
-          });
+          }
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -2221,7 +2217,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         ); // Replace with actual path
       // Add other cases for different transport types
       default:
-        return Icon(
+        return const Icon(
           Icons.directions_bus,
           color: Colors.grey,
           size: 24, // Default size for icon

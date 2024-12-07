@@ -50,17 +50,9 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   final Set<Marker> _originMarker = {};
   int stepNumber = 0;
 
-  PolylineId _updatecurrentPolylineId = PolylineId('NoId');
   final List<String> existingPagesTracker = [];
   String currentPage = 'origin';
 
-
-  void setNewPolyId(PolylineId id){
-    setState(() {
-      _updatecurrentPolylineId = id;
-      print('setnew id');
-    });
-  }
   void _fetchPolylineForExisting(LatLng pointA, LatLng pointB, Polyline nextPolyline,PolylineId polylineID) async{
     final polylinePoints = await _polylineDecoder.getRoutePolyline(
     [pointA,pointB]);
@@ -106,7 +98,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   step_polyline[currentPageTracker] = polylinePoints;
 
   PolylineId polylineID = PolylineId('polyline$currentPageTracker');
-  setNewPolyId(PolylineId('polyline$currentPageTracker'));
   int nextIndex = currentPageTracker+1;
   PolylineId nextPolylineid = PolylineId('polyline$nextIndex');
     try {
@@ -127,8 +118,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         }
       }
       setState(() {
-         
-         print("assign: $_updatecurrentPolylineId");
       if (existingPolyline != null) {
         //If the polyline exists, remove it from the set
         _polylines.remove(existingPolyline);
@@ -154,8 +143,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       );
       DataManager().insert_decodedPolyline_ToDM([newPolyline.points.first, newPolyline.points.last]);
       DataManager().insert_AllDecodedPolyline_ToDM(polylinePoints);
-      getMidpoint(polylinePoints);
-      
 
       //Add the updated or new polyline
       _polylines.add(newPolyline);
@@ -172,43 +159,6 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
       print('Error updating or adding polyline: $e');
     }
 }
-bool notChanged = false;
-void getMidpoint(List<LatLng> midpoints){
-  double computeMiddle = midpoints.length / 2;
-  int middle = computeMiddle.toInt();
-  LatLng middlepoint = midpoints[middle];
-  notChanged = true;
-  DataManager().insert_midpoint(currentPageTracker, [middlepoint], notChanged);
-  
-}
-
-void updatePolylineFromChange(List<LatLng> midpoints) async {
-  // Assuming _polylineDecoder.getRoutePolyline(midpoints) returns the updated points
-  final updatePolylinePoints = await _polylineDecoder.getRoutePolyline(midpoints);
-  print('update poly: $midpoints');
-  print('update Polyline From Change: $_updatecurrentPolylineId');
-
-  // Use forEach to iterate over the list of polylines and find the polyline to update
-  _polylines.forEach((poly) {
-    if (poly.polylineId == _updatecurrentPolylineId) {
-      // Found the polyline to update
-      setState(() {
-        // Create a new Polyline with the updated midpoints
-        Polyline updatedPolyline = Polyline(
-          polylineId: _updatecurrentPolylineId!,  // Use the same PolylineId
-          points: midpoints,  // Updated points (midpoints)
-          color: Colors.blue,  // Set the color as needed
-          width: 5,  // Set the width as needed
-        );
-
-        // Remove the old polyline and add the updated one
-        _polylines.remove(poly);
-        _polylines.add(updatedPolyline);
-      });
-    }
-  });
-}
-
   void changeWidget_for_changedButton(String nextButton){
     print('pages: $pages');
     int indexForNext = currentPageTracker + 1;
@@ -477,7 +427,6 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       if (pinnedLocations.length > 1) {
         print('try to fetch polyliine...');
         _fetchPolyline();
-
         print('polyliine fetched');
       } 
       else{
@@ -3176,23 +3125,6 @@ void insert_decodedPolyline_ToDM(List<LatLng> polylinepoints){
   // }
   // print('Polyline points: $polyline_points_map');
 }
-Map<int, List<LatLng>> step_midpoints = {};
-void insert_midpoint(int pageTracker, List<LatLng> midpoint, bool notChanged){
-  if(notChanged){
-    step_midpoints[pageTracker] = midpoint;
-  }
-  else{
-    // if changed, galing sa mapForPolylines
-    mainwidget.updatePolylineFromChange(midpoint);
-    // midpoint.removeAt(0);
-    // midpoint.removeLast();
-    step_midpoints[pageTracker] = midpoint;
-
-    //update polyline
-  }
-  
-  print('insert midpoint: $step_midpoints');
-}
 void insert_AllDecodedPolyline_ToDM(List<LatLng> polylinepoints){
   polyline_points[stepNumber] = polylinepoints;
   print("needed polyline points added to DM");
@@ -3235,18 +3167,6 @@ void insertDetailsToDB() async {
   });
   for (var key in stringKeyStepsMap.keys) {
     var stepData = stringKeyStepsMap[key];
-    if (stepData[1] is List) {
-      stepData[1] = stepData[1].map((item) => item.toString()).toList();
-    }
-    if (stepData.length > 2 && stepData[2] is List) {
-      stepData[2] = stepData[2].map((item) => item.toString()).toList();
-    }
-  }
-  Map<String, dynamic> stringKeyStepsPoly = step_midpoints.map((key, value) {
-    return MapEntry(key.toString(), value);
-  });
-  for (var key in stringKeyStepsPoly.keys) {
-    var stepData = stringKeyStepsPoly[key];
     if (stepData[1] is List) {
       stepData[1] = stepData[1].map((item) => item.toString()).toList();
     }
@@ -3311,7 +3231,6 @@ void insertDetailsToDB() async {
 
   try {
     String stepsMapJson = jsonEncode(stringKeyStepsMap);
-    String stepspolyMap = jsonEncode(stringKeyStepsPoly);
     // var polylinePointsJson = jsonEncode(convert_polylinePointsJson(polyline_coordinates_map));
     // var polyline_latitudePointsJson = jsonEncode(convert_polylinePointsLatitudeJson(polyline_coordinates_map));
     // var polyline_longitudePointsJson = jsonEncode(convert_polylinePointsLongitudeJson(polyline_coordinates_map));
@@ -3327,8 +3246,7 @@ void insertDetailsToDB() async {
       },
       body: {...originData,
        ...destinationData,
-       'steps_map': stepsMapJson,
-       'steps-poly': stepspolyMap},
+       'steps_map': stepsMapJson},
       //  'lat_polyline_points' : polyline_latitudePointsJson,
       //  'long_polyline_points' : polyline_longitudePointsJson},
     );
@@ -3683,7 +3601,16 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
                           ],
                         ),
                       ),
-                    )                              
+                    )
+                    // else if(stepType == 'walk')
+                    // Container(
+          
+                    // )
+                    // else if(stepType == 'ride')
+                    // Container(
+                      
+                    // )
+          
                   ],
                 ),
               );
@@ -3719,16 +3646,120 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
     );
   }
 }
-class PinnedLocation {
-  final LatLng origin;
-  final LatLng destination;
-  final LatLng midpoint;
-  final List<LatLng> polylinePoints; 
 
-  PinnedLocation({
-    required this.origin,
-    required this.destination,
-    required this.midpoint,
-    required this.polylinePoints,
-  });
-}
+
+
+
+//Walk widget
+ // Retrieve existing data for this page from DataManager if it exists
+    // var stepDetails = DataManager().get_ExistingStepDetails();
+    // if (stepDetails != null && stepDetails.length >= 3) {
+    //   // Populate controllers with existing data
+    //   locationName_controller.text = stepDetails[0];
+    //   landmarkName_controller.text = stepDetails[1];
+    //   instructions_controller.text = stepDetails[2];
+    // }
+    // Add listeners to save data back to DataManager as the user types
+    // locationName_controller.addListener(_saveChangesToDataManager);
+    // landmarkName_controller.addListener(_saveChangesToDataManager);
+    // instructions_controller.addListener(_saveChangesToDataManager);
+
+    // Add listener to check if all fields are filled
+   
+
+
+    // locationName_controller.addListener(notEmptyChecker);
+    // instructions_controller.addListener(notEmptyChecker);
+  
+    // // if(DataManager().stepChecker() == true){
+    // //   List<dynamic> stepDetails = DataManager().getStepsInformation();
+    // //  print(stepDetails);
+    // //  if(stepDetails.length == 3){
+    // //   setState(() {
+    // //    locationName_controller.text = stepDetails[2][0];
+    // //    landmarkName_controller.text = stepDetails[2][1];
+    // //    instructions_controller.text = stepDetails[2][2];
+    // //  });
+    // //  }
+     
+    // // } 
+    // // if(DataManager().getStepsMap()[DataManager().getCountTrackers()[0]]!.length == 3){
+    // //   locationName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][0] = locationName_controller.text;
+    // //     });
+    // //     landmarkName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][1] = locationName_controller.text;
+    // //     });
+    // //     instructions_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][2] = instructions_controller.text;
+    // //     });
+    // // }
+    
+    // // //for existing step
+    // // if(DataManager().get_ExistingStepDetails() != null){
+    // //   List<dynamic> originDetails = DataManager().get_ExistingStepDetails()!;
+    // //   //exameple: [locatiion_name,landmark, instructions]
+    // //   setState(() {
+    // //     locationName_controller.text = originDetails[0];
+    // //     landmarkName_controller.text = originDetails[1];
+    // //     instructions_controller.text = originDetails[2];
+          
+    // //     //for displaying the existing next step
+    // //     if(DataManager().get_nextButton() != null){
+    // //       nextButton = DataManager().get_nextButton()!;
+    // //       hasNextStep = true;
+    // //     }
+    // //     else{
+    // //       hasNextStep = false;
+    // //     }
+        
+    // //   });
+      
+    // // }else{
+    // //   print('error fetching data: ${DataManager().get_ExistingStepDetails()}');
+    // // }
+    // // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    // //   print('contains key = true');
+    // //   locationName_controller.clear();
+    // //     landmarkName_controller.clear();
+    // //     instructions_controller.clear();
+    // //     hasNextStep = false;
+    // //     nextButton = '';
+    // //     print('clear!');
+    // //   // if(DataManager().getStepsMap()[DataManager().getCurrentPageTracker()]!.length == 2){
+        
+    // //   // }
+    // //   if(DataManager().getStepsMap().length > DataManager().getCurrentPageTracker()){
+    // //   List<dynamic> stepDetails = DataManager().getValueInStepsMap();
+    // //   print('step Details: $stepDetails');
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   if(stepDetails.length == 3){ //has walk, location details, and step details
+    // //     setState(() {
+    // //       locationName_controller.text = stepDetails[2][0];
+    // //       landmarkName_controller.text = stepDetails[2][1];
+    // //       instructions_controller.text = stepDetails[2][2];
+    // //       nextButton = DataManager().getStepsMap()[DataManager().getCurrentPageTracker() +1]![0];
+    // //       // print('next Button: $nextButton');
+    // //       hasNextStep = true;
+    // //       print('update!');
+          
+    // //     });
+        
+        
+
+    // //     //get the next step for the button
+
+    // //   }
+      
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   }
+    // // }
+    // print('walk add - - - - - -- -- - - - ');
+    
+    // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    //   if(DataManager().getValueInStepsMap().length == 3){
+    //     locationName_controller.text = DataManager().get_ExistingStepDetails()![0];
+    //     landmarkName_controller.text = DataManager().get_ExistingStepDetails()![1];
+    //     instructions_controller.text = DataManager().get_ExistingStepDetails()![2];
+    //   }
+    // }
