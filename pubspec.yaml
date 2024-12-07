@@ -49,6 +49,7 @@ dependencies:
   geolocator: ^8.2.1
   flutter_riverpod: ^2.5.1
   uuid: ^4.4.2
+  path_provider: ^2.0.11
   
   
 

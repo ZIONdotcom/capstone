@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -11,7 +10,7 @@ class travelPlan2 extends StatefulWidget {
 }
 
 class _TravelPlan2State extends State<travelPlan2> {
-  final apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  final apiKey = 'AIzaSyC88-Wkb5_LmPU5OCQwPOMDTry3RGh1J00';
 
   late String lat, long;
   TextEditingController controller = TextEditingController();

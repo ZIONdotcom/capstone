@@ -18,8 +18,8 @@ class RouteCreation extends StatefulWidget {
   State<RouteCreation> createState() => _MyWidgetState();
 }
 
-class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderStateMixin {
-
+class _MyWidgetState extends State<RouteCreation>
+    with SingleTickerProviderStateMixin {
   GoogleMapController? mapController;
   Marker? originMarker;
   Marker? temporaryMarker;
@@ -37,7 +37,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   final GlobalKey<FormState> _walkFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _rideFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _page1FormKey = GlobalKey<FormState>();
- 
+
   // late LatLng currentPinnedLocation;
   bool mapClicked = false;
 
@@ -46,7 +46,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
   Map <int, List<LatLng>> step_polyline = {};
   final Set<Polyline> _polylines = {};
   final List<PolylineId> polyline_IDs = [];
-  final Set<Marker> _markers = {}; 
+  final Set<Marker> _markers = {};
   final Set<Marker> _originMarker = {};
   int stepNumber = 0;
 
@@ -75,10 +75,9 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
         _polylines.remove(nextPolyline);
         _polylines.add(newNPolyline);
         print('successful updating next polyline');
-      }catch(e){
+      } catch (e) {
         print('error updating next polyline');
       }
-      
     });
   }
 
@@ -119,7 +118,7 @@ class _MyWidgetState extends State<RouteCreation> with SingleTickerProviderState
           existingPolyline = polyline;
           print('existing polyline is visible');
         }
-        if(polyline.polylineId == nextPolylineid){
+        if (polyline.polylineId == nextPolylineid) {
           nextExistingpolyline = polyline;
         }
         if(previousPolylineid !=  null && polyline.polylineId == previousPolylineid){
@@ -214,43 +213,44 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
     int indexForNext = currentPageTracker + 1;
     MarkerId markerID = MarkerId('step$indexForNext');
     setState(() {
-      if(nextButton == 'walk'){
-      pages[indexForNext] = WalkWidget(key: UniqueKey(),onNewPage: _newPage,formKey:_walkFormKey);
-      currentPages[indexForNext] = 'walk';
-      print('change to walk');
-    }
-    else if(nextButton == 'ride'){
-      pages[currentPageTracker+1] = RideWidget(key: UniqueKey(),onNewPage: _newPage,formKey:_rideFormKey);
-      currentPages[currentPageTracker+1] = 'ride';
-      print('change to ride');
-    } 
-    else if(nextButton == 'done'){
-    
-    }
-    for (Marker _marker in _markers){
-      if(_marker.markerId == markerID){
-        //creates a copy of the marker
-        String   snippet = _marker.infoWindow.snippet!;
-        Marker updatedMarker = _marker.copyWith(
-        infoWindowParam: InfoWindow(
-          title: 'Step $indexForNext: ${currentPages[indexForNext]}',
-          snippet: snippet),
-        );
-        _markers.remove(_marker);
-        _markers.add(updatedMarker); 
-        break;  
+      if (nextButton == 'walk') {
+        pages[indexForNext] = WalkWidget(
+            key: UniqueKey(), onNewPage: _newPage, formKey: _walkFormKey);
+        currentPages[indexForNext] = 'walk';
+        print('change to walk');
+      } else if (nextButton == 'ride') {
+        pages[currentPageTracker + 1] = RideWidget(
+            key: UniqueKey(), onNewPage: _newPage, formKey: _rideFormKey);
+        currentPages[currentPageTracker + 1] = 'ride';
+        print('change to ride');
+      } else if (nextButton == 'done') {}
+      for (Marker _marker in _markers) {
+        if (_marker.markerId == markerID) {
+          //creates a copy of the marker
+          String snippet = _marker.infoWindow.snippet!;
+          Marker updatedMarker = _marker.copyWith(
+            infoWindowParam: InfoWindow(
+                title: 'Step $indexForNext: ${currentPages[indexForNext]}',
+                snippet: snippet),
+          );
+          _markers.remove(_marker);
+          _markers.add(updatedMarker);
+          break;
+        }
       }
-    }
     });
-    
   }
-  List <Widget> pages = [];
-  List <Widget> question_pages = [const WalkQuestionWidget(),const RideQuestionWidget()];
+
+  List<Widget> pages = [];
+  List<Widget> question_pages = [
+    const WalkQuestionWidget(),
+    const RideQuestionWidget()
+  ];
   List<String> currentPages = ['origin'];
   int questionPageTracker = 0;
   int currentPageTracker = 0;
   bool questionIsVisible = false;
-  List<double>sheetSizes = [0.46,0.25,0.46]; 
+  List<double> sheetSizes = [0.46, 0.25, 0.46];
   String? temporary_LocationName;
 
   // String getTermporary_LocationName(){
@@ -259,7 +259,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
   // }
   // final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-   // Method to trigger form validation
+  // Method to trigger form validation
   // void validateForm() {
   //   if (_formKey.currentState?.validate() ?? false) {
   //     print("Form is valid");
@@ -300,8 +300,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
           }
       });
       // print('not question');
-        
-      }
+    }
   }
   // void pageChecker() {
   //   if(currentPageTracker < currentPages.length){
@@ -317,7 +316,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
   //     print('--- origin');
   //   }
   //   }
-    
+
   //   print('Page checker');
   //   print(currentPages[currentPageTracker]);
   // }
@@ -330,31 +329,29 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       currentPageTracker++;
       DataManager().updateCountTracker(currentPageTracker);
       print('new page: $currentPageTracker - $currentPage');
-      
-      if(pagename == 'walk'){
-        
-          questionPageTracker = 0;
-          // page = WalkWidget(onNewPage: _newPage);
-        pages.add(WalkWidget(key: UniqueKey(),onNewPage: _newPage,formKey:_walkFormKey));
-      }
-      else if(pagename == 'ride'){
+
+      if (pagename == 'walk') {
+        questionPageTracker = 0;
+        // page = WalkWidget(onNewPage: _newPage);
+        pages.add(WalkWidget(
+            key: UniqueKey(), onNewPage: _newPage, formKey: _walkFormKey));
+      } else if (pagename == 'ride') {
         questionPageTracker = 1;
-        pages.add(RideWidget(key: UniqueKey(),onNewPage: _newPage,formKey:_rideFormKey));
+        pages.add(RideWidget(
+            key: UniqueKey(), onNewPage: _newPage, formKey: _rideFormKey));
         // page = RideWidget(onNewPage: _newPage);
-      }
-      else if(pagename == 'done'){
-      } 
-      else if(pagename == 'origin'){
-        pages.add(Page1(key: UniqueKey(),onNewPage: _newPage,formKey:_page1FormKey));
+      } else if (pagename == 'done') {
+      } else if (pagename == 'origin') {
+        pages.add(Page1(
+            key: UniqueKey(), onNewPage: _newPage, formKey: _page1FormKey));
         // page = Page1(onNewPage: _newPage);
-      }  
+      }
       //for icons in question widget to be not
       size_Checker();
-      
+
       // print('question is visible: $questionIsVisible');
     });
-    
-    
+
     print("Pages - - $pages");
     // print(sheetSizes);
   }
@@ -366,10 +363,10 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       DialogPopUp()._show_StartDialog(context);
     });
     // currentPages.add('origin');
-    pages.add(Page1(onNewPage: _newPage,formKey:_page1FormKey));
+    pages.add(Page1(onNewPage: _newPage, formKey: _page1FormKey));
   }
 
-    //Function to get the place name using Places API
+  //Function to get the place name using Places API
   // Future<void> _getPlaceName(LatLng position) async {
   //   final url =
   //       'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${position.latitude},${position.longitude}&radius=50&key=$apiKey';
@@ -396,24 +393,25 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
   // }
 
 //GET ADDRESS OF PINNED LOCATION
- Future<String> _getAddress(LatLng position) async {
-  try {
-    String address = 'No address found';
-    String placeName = 'Unknown Place';
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  Future<String> _getAddress(LatLng position) async {
+    try {
+      String address = 'No address found';
+      String placeName = 'Unknown Place';
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
 
-    if (placemarks.isNotEmpty) {
-      Placemark placemark = placemarks.first;
-      String name = placemark.name ?? '';
-      String locality = placemark.locality ?? '';
-      String administrativeArea = placemark.administrativeArea ?? '';
-      address = '$name, $locality, $administrativeArea';
-    }
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        String name = placemark.name ?? '';
+        String locality = placemark.locality ?? '';
+        String administrativeArea = placemark.administrativeArea ?? '';
+        address = '$name, $locality, $administrativeArea';
+      }
 
-    final url =
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${position.latitude},${position.longitude}&radius=50&type=establishment&key=$apiKey';
+      final url =
+          'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${position.latitude},${position.longitude}&radius=50&type=establishment&key=$apiKey';
 
-    final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -435,7 +433,6 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
     mapController = controller;
   }
 
-
   //for map pins
   void _addPin(LatLng pinnedLocation) async {
     String address = await _getAddress(pinnedLocation);
@@ -443,50 +440,48 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
       String currentPage = currentPages[currentPageTracker];
       Marker? existingMarker;
       MarkerId? markerID;
-      if(currentPageTracker == 0){
+      if (currentPageTracker == 0) {
         markerID = const MarkerId('origin');
-      }
-      else{
+      } else {
         markerID = MarkerId('step$currentPageTracker');
       }
-      for(Marker _marker in _markers){
-        if(_marker.markerId ==  markerID){
+      for (Marker _marker in _markers) {
+        if (_marker.markerId == markerID) {
           existingMarker = _marker;
         }
       }
-      if(existingMarker != null){
+      if (existingMarker != null) {
         _markers.remove(existingMarker);
         pinnedLocations[currentPageTracker] = pinnedLocation;
         print('Marker removed and is going to be updated');
-      }
-      else{
+      } else {
         pinnedLocations.add(pinnedLocation);
-        print('Add new marker'); 
+        print('Add new marker');
       }
       Marker newMarker = Marker(
-        markerId: markerID,
-        position: pinnedLocation,
-        infoWindow: InfoWindow(
-          title: currentPageTracker == 0 
-          ?"Origin"
-          : "Step $currentPageTracker: $currentPage",
-          snippet: address));
+          markerId: markerID,
+          position: pinnedLocation,
+          infoWindow: InfoWindow(
+              title: currentPageTracker == 0
+                  ? "Origin"
+                  : "Step $currentPageTracker: $currentPage",
+              snippet: address));
       _markers.add(newMarker);
-      DataManager().insertStepLocationData(currentPageTracker, currentPage, [address,pinnedLocation.latitude,pinnedLocation.longitude]);
+      DataManager().insertStepLocationData(currentPageTracker, currentPage,
+          [address, pinnedLocation.latitude, pinnedLocation.longitude]);
       print('location details added to Data Manager');
       if (pinnedLocations.length > 1) {
         print('try to fetch polyliine...');
         _fetchPolyline();
 
         print('polyliine fetched');
-      } 
-      else{
+      } else {
         print('polyliine not fetched');
       }
-       size_Checker();
+      size_Checker();
       print("add pin question is visible: $questionIsVisible");
     });
-}
+  }
 
   //animate camera to last pinned location
   void _focusOnLastPinnedLocation() async {
@@ -516,8 +511,8 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
             child: Stack(
               children: [
                 SizedBox(
-                  height: mapClicked ? 500 : double.infinity, 
-                  width: double.infinity, 
+                  height: mapClicked ? 500 : double.infinity,
+                  width: double.infinity,
                   child: GoogleMap(
                     onMapCreated: _onMapCreated,
                     initialCameraPosition: CameraPosition(
@@ -793,7 +788,6 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
     );
   }
 
-
   //para se fetching ng decoded polyline then assign it again
   Set<Polyline> polylinesInStep = {};
   Set<Polyline> _convertListToPolyline(){
@@ -865,7 +859,7 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
             TextButton(
               child: const Text("OK"),
               onPressed: () {
-                // print(data[1]['username']); 
+                // print(data[1]['username']);
                 Navigator.of(context).pop(); // Close the dialog
               },
             ),
@@ -875,10 +869,6 @@ void updatePolylineFromChange(List<LatLng> midpoints) async {
     );
   }
 }
-
-
-
-
 
 class WalkQuestionWidget extends StatefulWidget {
   const WalkQuestionWidget({super.key});
@@ -893,7 +883,7 @@ class _WalkQuestionWidgetState extends State<WalkQuestionWidget> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(top: 50,left: 15.0, right: 15.0),
+          padding: const EdgeInsets.only(top: 50, left: 15.0, right: 15.0),
           child: Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 5.0),
@@ -909,7 +899,6 @@ class _WalkQuestionWidgetState extends State<WalkQuestionWidget> {
         ),
       ),
     );
-  
   }
 }
 
@@ -926,7 +915,7 @@ class _RideQuestionWidgetState extends State<RideQuestionWidget> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(top: 50,left: 15.0, right: 15.0),
+          padding: const EdgeInsets.only(top: 50, left: 15.0, right: 15.0),
           child: Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 5.0),
@@ -945,25 +934,11 @@ class _RideQuestionWidgetState extends State<RideQuestionWidget> {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class Page1 extends StatefulWidget {
-  final Function(String) onNewPage; 
+  final Function(String) onNewPage;
   final GlobalKey<FormState> formKey;
   // final Function(String) onPlaceNameUpdated;
-  const Page1({super.key, required this.onNewPage,required this.formKey});
+  const Page1({super.key, required this.onNewPage, required this.formKey});
   @override
   State<Page1> createState() => _Page1State();
 }
@@ -988,7 +963,7 @@ class _Page1State extends State<Page1> {
     super.initState();
     print('now in page 1');
     temporary_locationName = DataManager().get_temporary_LocationName();
-    if(temporary_locationName != null){
+    if (temporary_locationName != null) {
       setState(() {
         textOriginController.text = temporary_locationName!;
         textOriginIsNotEmpty = true;
@@ -996,8 +971,8 @@ class _Page1State extends State<Page1> {
     }
 
     //to identify if the textOrigin is empty or not
-    textOriginController.addListener((){
-      WidgetsBinding.instance.addPostFrameCallback((_){
+    textOriginController.addListener(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           textOriginIsNotEmpty = textOriginController.text.isNotEmpty;
           //print(textOriginIsNotEmpty.toString());
@@ -1012,14 +987,12 @@ class _Page1State extends State<Page1> {
       if(DataManager().get_nextButton() != null){
         nextButton = DataManager().get_nextButton()!;
         hasNextStep = true;
-      }
-      else{
+      } else {
         hasNextStep = false;
       }
       textOriginController.addListener(saveChangesToDataManager);
       landmarkController.addListener(saveChangesToDataManager);
       // textOriginController.addListener(retrieveChangesFromDM);
-
     }
 
     // if(DataManager().get_ExistingStepDetails() != null){
@@ -1028,7 +1001,7 @@ class _Page1State extends State<Page1> {
     //   setState(() {
     //       landmarkController.text = originDetails[1];
     //       textOriginController.text = originDetails[0];
-          
+
     //   });
     // }
     // if(DataManager().getStepsMap().length > 1){
@@ -1042,7 +1015,7 @@ class _Page1State extends State<Page1> {
     //       nextButton = DataManager().getStepsMap()[DataManager().getCurrentPageTracker() +1]![0];
     //       print('next Button: $nextButton');
     //       hasNextStep = true;
-          
+
     //     });
     //     textOriginController.addListener((){
     //       DataManager().getValueInStepsMap()[2][0] = textOriginController.text;
@@ -1050,18 +1023,18 @@ class _Page1State extends State<Page1> {
     //     landmarkController.addListener((){
     //       DataManager().getValueInStepsMap()[2][1] = landmarkController.text;
     //     });
-        
 
     //     //get the next step for the button
 
     //   }
     // }
-    
+
     //  if(mainwidget.getTermporary_LocationName() != ''){
     // print('tempo location is not empty');
     //   textOriginController.text = mainwidget.getTermporary_LocationName();
     // }
   }
+
   // void change_locationName_By_MapClick(String newlocation){
   //   setState(() {
   //     textOriginController.text = newlocation;
@@ -1074,30 +1047,31 @@ class _Page1State extends State<Page1> {
 
   }
 
-
   // NOT YET IMPLEMENTED!!
-  void updateLocationName_basedOnTap(String locationname){
+  void updateLocationName_basedOnTap(String locationname) {
     setState(() {
       textOriginController.text = locationname;
     });
   }
 
-  void addToDataManager(){
+  void addToDataManager() {
     // DataManager().addOriginInformation(textOriginController.text,landmarkController.text);
     DataManager().insert_LocationNameLandmark(textOriginController.text,landmarkController.text);
     
   }
 
-  void clearAll(){
+  void clearAll() {
     landmarkController.clear();
     textOriginController.clear();
   }
-  void onClick_check(String buttonname){
-    if(widget.formKey.currentState?.validate() ?? false){
+
+  void onClick_check(String buttonname) {
+    if (widget.formKey.currentState?.validate() ?? false) {
       addToDataManager();
-    widget.onNewPage(buttonname);
-    } 
+      widget.onNewPage(buttonname);
+    }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1234,31 +1208,32 @@ class _Page1State extends State<Page1> {
                             Container(
                               margin: const EdgeInsets.only(left: 10, right: 5),
                               child: ElevatedButton(
-                              onPressed: (){
-                                setState(() {
-                                  if(nextButton == 'walk'){
-                                    nextButton = 'ride';
-                                  }
-                                  // else if(nextButton == 'ride'){
-                                  //   nextButton = 'done';
-                                  // }
-                                    else if(nextButton == 'ride'){
-                                    nextButton = 'walk';
-                                  }
-                                  DataManager().updateNextButton(nextButton);
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: const Color.fromARGB(255, 99, 131, 249),
-                                minimumSize: const Size(131, 26), 
+                                onPressed: () {
+                                  setState(() {
+                                    if (nextButton == 'walk') {
+                                      nextButton = 'ride';
+                                    }
+                                    // else if(nextButton == 'ride'){
+                                    //   nextButton = 'done';
+                                    // }
+                                    else if (nextButton == 'ride') {
+                                      nextButton = 'walk';
+                                    }
+                                    DataManager().updateNextButton(nextButton);
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 99, 131, 249),
+                                  minimumSize: const Size(131, 26),
                                 ),
-                              child: Text(nextButton),
+                                child: Text(nextButton),
                               ),
                             ),
                             const Row(
                               children: [
-                                  Text(
+                                Text(
                                   '(',
                                   style: TextStyle(
                                     color: Colors.black,
@@ -1301,87 +1276,80 @@ class _Page1State extends State<Page1> {
                             )
                           ],
                         )
-                        :Column(
+                      : Column(
                           children: [
-                           if(textOriginIsNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.only(left: 20.0),
-                              alignment: Alignment.centerLeft,
-                              child: const Text(
-                                'What is the first step?',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                            if (textOriginIsNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.only(left: 20.0),
+                                alignment: Alignment.centerLeft,
+                                child: const Text(
+                                  'What is the first step?',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if(textOriginIsNotEmpty)
-                            Row(
-                              children: [ 
-                                Container(
-                                  margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                                  child: ElevatedButton(
-                                  onPressed: (){
-                                    onClick_check('walk');
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: const Color(0xff1F41BB),
-                                    minimumSize: const Size(131, 26), 
+                            if (textOriginIsNotEmpty)
+                              Row(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(
+                                        left: 20,
+                                        right: 5,
+                                        top: 10,
+                                        bottom: 10),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        onClick_check('walk');
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor:
+                                            const Color(0xff1F41BB),
+                                        minimumSize: const Size(131, 26),
+                                      ),
+                                      child: const Text('Walk'),
                                     ),
-                                  child: const Text('Walk'),
                                   ),
-                                ),
-                                Container(
-                                  margin: const EdgeInsets.only(left: 20, right: 5, top: 10, bottom: 10),
-                                  child: ElevatedButton(
-                                  onPressed: (){
-                                    onClick_check('ride');
-                                
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: const Color(0xff1F41BB),
-                                    minimumSize: const Size(131, 26), 
+                                  Container(
+                                    margin: const EdgeInsets.only(
+                                        left: 20,
+                                        right: 5,
+                                        top: 10,
+                                        bottom: 10),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        onClick_check('ride');
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor:
+                                            const Color(0xff1F41BB),
+                                        minimumSize: const Size(131, 26),
+                                      ),
+                                      child: const Text('Ride'),
                                     ),
-                                  child: const Text('Ride'),
-                                  ),
-                                )
-                              ],
-                            )                         
+                                  )
+                                ],
+                              )
                           ],
                         ),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-          );
-}}
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class WalkWidget extends StatefulWidget {
   final Function(String) onNewPage;
   final GlobalKey<FormState> formKey;
-  const WalkWidget({super.key, required this.onNewPage,required this.formKey});
+  const WalkWidget({super.key, required this.onNewPage, required this.formKey});
 
   @override
   _WalkWidgetState createState() => _WalkWidgetState();
@@ -1395,7 +1363,7 @@ class _WalkWidgetState extends State<WalkWidget> {
   // List <TextEditingController> locationName_controllers =[];
   // List <TextEditingController> landmarkName_controllers =[];
   // List <TextEditingController> instructions_controllers =[];
-  Map<int,List<TextEditingController>> controllers = {};
+  Map<int, List<TextEditingController>> controllers = {};
   TextEditingController locationName_controller = TextEditingController();
   TextEditingController landmarkName_controller = TextEditingController();
   TextEditingController instructions_controller = TextEditingController();
@@ -1406,7 +1374,6 @@ class _WalkWidgetState extends State<WalkWidget> {
   String? temporary_locationName;
   bool hasNextStep = false;
 
-
   // void addNewController(){
   //   TextEditingController locationName_controller = TextEditingController();
   //   TextEditingController landmarkName_controller = TextEditingController();
@@ -1415,13 +1382,12 @@ class _WalkWidgetState extends State<WalkWidget> {
   //   landmarkName_controllers.add(landmarkName_controller);
   //   instructions_controllers.add(instructions_controller);
   // }
-  
 
   @override
   void initState() {
     super.initState();
     temporary_locationName = DataManager().get_temporary_LocationName();
-    if(temporary_locationName != null){
+    if (temporary_locationName != null) {
       setState(() {
         locationName_controller.text = temporary_locationName!;
         allIsNotEmpty = true;
@@ -1438,8 +1404,7 @@ class _WalkWidgetState extends State<WalkWidget> {
       if(DataManager().get_nextButton() != null){
         nextButton = DataManager().get_nextButton()!;
         hasNextStep = true;
-      }
-      else{
+      } else {
         hasNextStep = false;
       }
       locationName_controller.addListener(saveChangesToDataManager);
@@ -1481,15 +1446,16 @@ class _WalkWidgetState extends State<WalkWidget> {
     DataManager().getStepsInformation()[2][0] = instructions_controller.text;
 
   }
-   void notEmptyChecker(){
+
+  void notEmptyChecker() {
     setState(() {
-      allIsNotEmpty = locationName_controller.text.isNotEmpty && 
-    instructions_controller.text.isNotEmpty;
+      allIsNotEmpty = locationName_controller.text.isNotEmpty &&
+          instructions_controller.text.isNotEmpty;
       // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker()) &&allIsNotEmpty){
       // }
     });
   }
-  
+
   @override
   void dispose() {
     locationName_controller.dispose();
@@ -1497,6 +1463,7 @@ class _WalkWidgetState extends State<WalkWidget> {
     landmarkName_controller.dispose();
     super.dispose();
   }
+
   // void clearAll(){
   //   locationName_controller.clear();
   //   instructions_controller.clear();
@@ -1509,14 +1476,15 @@ class _WalkWidgetState extends State<WalkWidget> {
   // void updateState(bool numberisequal){
 
   //     numberIsEqual = numberisequal;
-    
+
   // }
-  void onClick_check(String buttonname){
-    if(widget.formKey.currentState?.validate() ?? false){
+  void onClick_check(String buttonname) {
+    if (widget.formKey.currentState?.validate() ?? false) {
       insertToDataManager();
       widget.onNewPage(buttonname);
-    } 
+    }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1656,11 +1624,10 @@ class _WalkWidgetState extends State<WalkWidget> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter instructions';
                     }
-                    return null;  // You can add more validations as needed
+                    return null; // You can add more validations as needed
                   },
                 style: const TextStyle(fontSize: 12),
                 ),
-                
                 Column(
                   children: [hasNextStep
                   ? Row(
@@ -1834,10 +1801,9 @@ class _WalkWidgetState extends State<WalkWidget> {
 }
 
 class RideWidget extends StatefulWidget {
- 
-  final Function(String) onNewPage; 
+  final Function(String) onNewPage;
   final GlobalKey<FormState> formKey;
-  const RideWidget({super.key, required this.onNewPage,required this.formKey});
+  const RideWidget({super.key, required this.onNewPage, required this.formKey});
 
   @override
   State<RideWidget> createState() => _RideWidgetState();
@@ -1845,14 +1811,14 @@ class RideWidget extends StatefulWidget {
 
 class _RideWidgetState extends State<RideWidget> {
   final _MyWidgetState mainwidget = _MyWidgetState();
-   final ScrollController scrollController = ScrollController();
+  final ScrollController scrollController = ScrollController();
   TextEditingController landmarkName_controller = TextEditingController();
   TextEditingController locationName_controller = TextEditingController();
   TextEditingController instructions_controller = TextEditingController();
   TextEditingController fare_controller = TextEditingController();
-  bool allIsNotEmpty= false;
+  bool allIsNotEmpty = false;
   bool instructionsIsNotEmpty = false;
-  List<bool> buttonClicked = [true,true,true,true,true];
+  List<bool> buttonClicked = [true, true, true, true, true];
   String nextButton = '';
   String? temporary_locationName;
   bool hasNextStep = false;
@@ -1863,7 +1829,7 @@ class _RideWidgetState extends State<RideWidget> {
   void initState() {
     super.initState();
     temporary_locationName = DataManager().get_temporary_LocationName();
-    if(temporary_locationName != null){
+    if (temporary_locationName != null) {
       setState(() {
         locationName_controller.text = temporary_locationName!;
         allIsNotEmpty = true;
@@ -1882,8 +1848,7 @@ class _RideWidgetState extends State<RideWidget> {
         fare_controller.text = valuesInMap[2][1];
         selectedVehicle = valuesInMap[2][2];
       }
-      
-      
+
       regenerateButton();
       print('To widget: $valuesInMap');
       // switch(valuesInMap[2][4]){
@@ -1903,13 +1868,11 @@ class _RideWidgetState extends State<RideWidget> {
       //     buttonClicked[i] = false;
       //   }
       // }
-      if(DataManager().get_nextButton() != null){
+      if (DataManager().get_nextButton() != null) {
         nextButton = DataManager().get_nextButton()!;
         hasNextStep = true;
         print('Button: has next step is true');
-      }
-      else{
-        
+      } else {
         hasNextStep = false;
         print('Button: has next step is false');
       }
@@ -1920,9 +1883,9 @@ class _RideWidgetState extends State<RideWidget> {
       if(DataManager().getStepsInformation()[2].length == 3 && selectedVehicle != (DataManager().getStepsInformation()[2][2]) ){
         print('Selected vehicle is not equal to data manager');
         saveChangesToDataManager();
-        }
+      }
     }
-   
+
     // if(DataManager().get_ExistingStepDetails() != null){
     //   List<dynamic> originDetails = DataManager().get_ExistingStepDetails()!;
     //   //exameple: [locatiion_name,landmark, instructions,selectedItem]
@@ -1931,7 +1894,7 @@ class _RideWidgetState extends State<RideWidget> {
     //     landmarkName_controller.text = originDetails[1];
     //     instructions_controller.text = originDetails[2];
     //     // selectedItem = originDetails[3];
-          
+
     //     //for displaying the existing next step
     //     if(DataManager().get_nextButton() != null){
     //       nextButton = DataManager().get_nextButton()!;
@@ -1953,16 +1916,16 @@ class _RideWidgetState extends State<RideWidget> {
     //     //   originDetails[3] = selectedItem;
     //     // }
     //   });
-      
+
     // }
-    
+
     // if(DataManager().stepChecker() == true){
     //   List<dynamic> stepDetails = DataManager().getStepsInformation();
     //   print('fetch ride successful');
     //  print(stepDetails);
     //  if(stepDetails.length == 3){
     //   setState(() {
-        
+
     //    locationName_controller.text = stepDetails[2][0];
     //    landmarkName_controller.text = stepDetails[2][1];
     //    instructions_controller.text = stepDetails[2][2];
@@ -1987,33 +1950,36 @@ class _RideWidgetState extends State<RideWidget> {
     //   });
     //   selectedItem =  DataManager().getStepsInformation()[2][3];
     //  }
-     
-     
-    // } 
-    
+
+    // }
   }
-  void regenerateButton(){
-    int index =0;
+
+  void regenerateButton() {
+    int index = 0;
     setState(() {
-      switch(selectedVehicle){
-      case 'Bus':
-        index = 0;break;
-      case 'E-jeep':
-        index = 1;break;
-      case 'Jeep':
-        index = 2;break;
-      case 'Tricycle':
-        index = 3;break;
-      case 'UV':
-        index = 4;break;
-    }
-    for(int i = 0; i<buttonClicked.length; i++){
-        if(i != index){
+      switch (selectedVehicle) {
+        case 'Bus':
+          index = 0;
+          break;
+        case 'E-jeep':
+          index = 1;
+          break;
+        case 'Jeep':
+          index = 2;
+          break;
+        case 'Tricycle':
+          index = 3;
+          break;
+        case 'UV':
+          index = 4;
+          break;
+      }
+      for (int i = 0; i < buttonClicked.length; i++) {
+        if (i != index) {
           buttonClicked[i] = false;
         }
       }
     });
-    
   }
   void saveChangesToDataManager(){
     DataManager().getStepsInformation()[1][3] = locationName_controller.text;
@@ -2028,12 +1994,14 @@ class _RideWidgetState extends State<RideWidget> {
       DataManager().getStepsInformation()[2][2] = selectedVehicle;
     }
   }
-  void notEmptyChecker(){
-    setState(() { 
+
+  void notEmptyChecker() {
+    setState(() {
       allIsNotEmpty = allIsNotEmptyChecker();
     });
   }
-  bool allIsNotEmptyChecker(){
+
+  bool allIsNotEmptyChecker() {
     bool _buttonClicked = false;
     int _true = 0;
     for(int x = 0;x < buttonClicked.length; x++){
@@ -2052,11 +2020,12 @@ class _RideWidgetState extends State<RideWidget> {
     DataManager().insert_LocationNameLandmark(locationName_controller.text,landmarkName_controller.text);
     DataManager().insertStepData([instructions_controller.text,fare_controller.text,selectedVehicle]);
   }
-   void onClick_check(String buttonname){
-    if(widget.formKey.currentState?.validate() ?? false){
+
+  void onClick_check(String buttonname) {
+    if (widget.formKey.currentState?.validate() ?? false) {
       insertToDataManager();
       widget.onNewPage(buttonname);
-    } 
+    }
   }
 
   @override
@@ -2068,14 +2037,13 @@ class _RideWidgetState extends State<RideWidget> {
     selectedVehicle = '';
     super.dispose();
   }
-  void toggleButtonClicked(int index){
-    for(int i = 0; i < buttonClicked.length; i++){
-      if(index == i){
+
+  void toggleButtonClicked(int index) {
+    for (int i = 0; i < buttonClicked.length; i++) {
+      if (index == i) {
         buttonClicked[i] = true;
         updateButtonInDataManager();
-        
-      }
-      else{
+      } else {
         buttonClicked[i] = false;
       }
     }
@@ -2392,90 +2360,88 @@ class _RideWidgetState extends State<RideWidget> {
                   Column(
                     children: [hasNextStep
                     ? Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.only(left: 20.0),
-                          alignment: Alignment.centerLeft,
-                          child: const Text(
-                            'Next Step:',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.only(left: 20.0),
+                            alignment: Alignment.centerLeft,
+                            child: const Text(
+                              'Next Step:',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(left: 10, right: 5),
-                          child: ElevatedButton(
-                          onPressed: (){
-                            setState(() {
-                              if(nextButton == 'walk'){
-                                nextButton = 'ride';
-                              }
-                              else if(nextButton == 'ride'){
-                                nextButton = 'done';
-                              }
-                                else if(nextButton == 'done'){
-                                nextButton = 'walk';
-                              }
-                              DataManager().updateNextButton(nextButton);
-                            });                         
-                          },
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: const Color.fromARGB(255, 99, 131, 249),
-                            minimumSize: const Size(131, 26), 
+                          Container(
+                            margin: const EdgeInsets.only(left: 10, right: 5),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  if (nextButton == 'walk') {
+                                    nextButton = 'ride';
+                                  } else if (nextButton == 'ride') {
+                                    nextButton = 'done';
+                                  } else if (nextButton == 'done') {
+                                    nextButton = 'walk';
+                                  }
+                                  DataManager().updateNextButton(nextButton);
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor:
+                                    const Color.fromARGB(255, 99, 131, 249),
+                                minimumSize: const Size(131, 26),
+                              ),
+                              child: Text(nextButton),
                             ),
-                          child: Text(nextButton),
                           ),
-                        ),
-                        const Row(
-                          children: [
+                          const Row(
+                            children: [
                               Text(
-                              '(',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 22,
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                            SizedBox(width: 5),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Tap to change',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w100,
-                                  ),
+                                '(',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.normal,
                                 ),
-                                Text(
-                                  'step',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w100,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              ')',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 22,
-                                fontWeight: FontWeight.normal,
                               ),
-                            ),
-                          ],
-                        )
-                        
-                      ],
-                    )
+                              SizedBox(width: 5),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Tap to change',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w100,
+                                    ),
+                                  ),
+                                  Text(
+                                    'step',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w100,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                ')',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      )
                     : Column(
                         children: [
                           // if (allIsNotEmpty)
@@ -2494,7 +2460,7 @@ class _RideWidgetState extends State<RideWidget> {
                           ),
                           // if (allIsNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(left:15.0),
+                            padding: const EdgeInsets.only(left: 15.0),
                             child: Row(
                           children: [
                             Container(
@@ -2546,8 +2512,8 @@ class _RideWidgetState extends State<RideWidget> {
                                                   ],
                                                 ),
                           ),
-                  ],
-                ),        
+                        ],
+                      ),
               ],
             )
           ],
@@ -2579,7 +2545,7 @@ class _RideWidgetState extends State<RideWidget> {
   // List<bool> checkboxBusTracker = [];
   // List<bool> checkboxJeepRoutesTracker = [];
   // List<bool> checkboxBusRoutesTracker = [];
-  
+
   // //int listNumber = 0;
 
   // String? selectedValue;
@@ -2762,8 +2728,8 @@ class _RideWidgetState extends State<RideWidget> {
   //                   ),
   //                 ),
   //                 Wrap(
-  //                 spacing: 8.0, 
-  //                 runSpacing: 0.0, 
+  //                 spacing: 8.0,
+  //                 runSpacing: 0.0,
   //                 children: List.generate(busCorporations.length, (index) {
   //                   return SizedBox(
   //                     width: MediaQuery.of(context).size.width / 2 - 16,
@@ -2773,7 +2739,7 @@ class _RideWidgetState extends State<RideWidget> {
   //                           value: checkboxBusTracker[index],
   //                           onChanged: (bool? value) {
   //                             setState(() {
-  //                               checkboxBusTracker[index] = value ?? false; 
+  //                               checkboxBusTracker[index] = value ?? false;
   //                             });
   //                           },
   //                         ),
@@ -2799,18 +2765,18 @@ class _RideWidgetState extends State<RideWidget> {
   //                   ),
   //                 ),
   //               Wrap(
-  //               spacing: 8.0, 
-  //               runSpacing: 0.0, 
+  //               spacing: 8.0,
+  //               runSpacing: 0.0,
   //               children: List.generate(busRoutes.length, (index) {
   //                 return SizedBox(
-  //                   width: MediaQuery.of(context).size.width / 2 - 16, 
+  //                   width: MediaQuery.of(context).size.width / 2 - 16,
   //                   child: Row(
   //                     children: [
   //                       Checkbox(
   //                         value: checkboxBusRoutesTracker[index],
   //                         onChanged: (bool? value) {
   //                           setState(() {
-  //                             checkboxBusRoutesTracker[index] = value ?? false; 
+  //                             checkboxBusRoutesTracker[index] = value ?? false;
   //                           });
   //                         },
   //                       ),
@@ -2899,10 +2865,11 @@ class _RideWidgetState extends State<RideWidget> {
   //   );
   // }
 }
-class DataManager{
+
+class DataManager {
   static final DataManager _instance = DataManager._internal();
 
-  factory DataManager(){
+  factory DataManager() {
     return _instance;
   }
   DataManager._internal();
@@ -2916,110 +2883,109 @@ class DataManager{
   LatLng? destination_coordinates;
   String? temporary_LocationName;
   _Page1State page1 = _Page1State();
-  void addMarkerCoordinaates(LatLng latlng){
-     marker_coordinates.add(latlng);
+  void addMarkerCoordinaates(LatLng latlng) {
+    marker_coordinates.add(latlng);
   }
-  void set_temporary_LocationName(String locationname){
 
+  void set_temporary_LocationName(String locationname) {
     temporary_LocationName = locationname;
     // page1.change_locationName_By_MapClick(temporary_LocationName!);
   }
-  String? get_temporary_LocationName(){
+
+  String? get_temporary_LocationName() {
     return temporary_LocationName;
   }
 
-  void addOriginCoordinates(LatLng latlng, String address){
+  void addOriginCoordinates(LatLng latlng, String address) {
     origin_coordinates = latlng;
-    if(origin_information.length == 3){
+    if (origin_information.length == 3) {
       //kapag nakapag pin na ng origin tas gusto imodify
       origin_information[0] = address;
-    }
-    else{
+    } else {
       //kapag hindi pa nakaoagpin ng origin (first pin)
       origin_information.add(address); //index 0
-      
     }
 
-    if(coordinates.isEmpty){
-        //kapag wala pang pin
-        coordinates.add(latlng);
-      }
-      else{
-        //kapag may pin na
-        coordinates[0] = latlng;
-      }
-  }
-  void addOriginInformation(String landmark, String locationName){
-    if(origin_information.length == 3){
-       origin_information[1] = landmark;
-      origin_information[2] = locationName;
+    if (coordinates.isEmpty) {
+      //kapag wala pang pin
+      coordinates.add(latlng);
+    } else {
+      //kapag may pin na
+      coordinates[0] = latlng;
     }
-    else{
+  }
+
+  void addOriginInformation(String landmark, String locationName) {
+    if (origin_information.length == 3) {
+      origin_information[1] = landmark;
+      origin_information[2] = locationName;
+    } else {
       origin_information.add(landmark);
       origin_information.add(locationName);
     }
     print(origin_information);
     print(origin_coordinates);
   }
+
   // return of texts sa origin page
-  List<String> getOriginInformation(){
+  List<String> getOriginInformation() {
     // return [landmark,location]
     return origin_information;
   }
+
   // checks if nageexist ba  yung current step number
-  bool stepChecker(){
+  bool stepChecker() {
     print('stepChecker:');
     print(stepsMap.containsKey(stepNumber));
     return stepsMap.containsKey(stepNumber);
   }
 
-
-  void changeStep(int index,String step){
-    if(stepsMap.containsKey(index)){
-      stepsMap[index]![0]= step;
+  void changeStep(int index, String step) {
+    if (stepsMap.containsKey(index)) {
+      stepsMap[index]![0] = step;
       print('success changeStep in DataManager(): $stepsMap[index]');
-    }
-    else{
+    } else {
       print('change unsuccessful [DataManger]');
     }
   }
+
   //returns [origin/ride/walk[List...],List[...]]
-  List<dynamic> get_accessOnValuesInMap(){
+  List<dynamic> get_accessOnValuesInMap() {
     return stepsMap[stepNumber]!;
   }
+
   //return stepsMap
-  Map<int,List<dynamic>> getStepsMap(){
+  Map<int, List<dynamic>> getStepsMap() {
     return stepsMap;
   }
-  int getCurrentPageTracker(){
+
+  int getCurrentPageTracker() {
     print('Data Manager currentPageTracker: $stepNumber');
     return stepNumber;
   }
 
   //returns texts para sa walk and ride widget(situation: during run time or pag napress ang back or forward)
-  List<dynamic> getStepsInformation(){
+  List<dynamic> getStepsInformation() {
     print('getStepsInformation:');
     print(stepsMap[stepNumber]!);
     return stepsMap[stepNumber]!;
   }
+
   // _WalkWidgetState walkwidget = _WalkWidgetState();
   final Set<LatLng> marker_coordinates = {};
-  Map<int,List<dynamic>> stepsMap = {};
+  Map<int, List<dynamic>> stepsMap = {};
   int stepNumber = 0;
 
-
-  List<dynamic> getValueInStepsMap(){
+  List<dynamic> getValueInStepsMap() {
     return stepsMap[stepNumber]!;
   }
-
 
   // void insertTemporaryLocationName(String placename){
   //   List<dynamic> forLocationDetails = [];
   //     List<dynamic> forStepDetails = [placename];
   //   if(stepsMap[stepNumber]!.length == 1){
   //     //means wala pa laman ex. {walk}
-      
-      
+
   //     stepsMap[stepNumber]!.add(forLocationDetails);
   //     stepsMap[stepNumber]!.add(forStepDetails);
   //   }
@@ -3033,13 +2999,13 @@ class DataManager{
   //   }
   // }
 
-  // this is to add step details: 
+  // this is to add step details:
   // Walk:[locatio_name,landmark,instructions]
   //Ride"[location_name,landmark,instructions,fare,mode of transpo]
-  void insertStepData(List<dynamic>stepData){
+  void insertStepData(List<dynamic> stepData) {
     print("{add step data to Data Manager}");
-     print("Data to be inserted:$stepData");
-    if(stepsMap.containsKey(stepNumber)){
+    print("Data to be inserted:$stepData");
+    if (stepsMap.containsKey(stepNumber)) {
       stepsMap[stepNumber]!.add(stepData);
       print("step data added successfully to stepsMap in database");
       print("Update: $stepsMap");
@@ -3065,7 +3031,7 @@ class DataManager{
   }
      //locationData:[walk/ride,[location data: address,long,lat]]
     print('add existing/new location data to stepsMap in Data Manager');
-     print('Update: $stepsMap');  
+    print('Update: $stepsMap');
   }
   void insert_LocationNameLandmark(String locationName, String landmark){
     if(stepsMap.containsKey(stepNumber)){
@@ -3085,55 +3051,52 @@ class DataManager{
   Future<void> updateCountTracker(int currentpagetracker) async{
     stepNumber = currentpagetracker;
     print("Update CountTracker: $stepNumber");
-    
   }
-  List? get_ExistingStepDetails(){
+
+  List? get_ExistingStepDetails() {
     print('try to fetch data');
-    if(stepsMap.containsKey(stepNumber)){
-      if(stepsMap[stepNumber]!.length == 3){
+    if (stepsMap.containsKey(stepNumber)) {
+      if (stepsMap[stepNumber]!.length == 3) {
         print(stepNumber);
         print("fetched data: ${stepsMap[stepNumber]![2]}");
         print('fetching data was successful');
         print('update:$stepsMap');
         return stepsMap[stepNumber]![2];
-      }
-      else {
+      } else {
         print("error fetching data");
       }
-       
-    }
-    else{
+    } else {
       return null;
     }
     return null;
   }
-  String? get_nextButton(){
-    if(stepNumber < stepsMap.length){
-      return stepsMap[stepNumber+1]![0];
-    }
-    else{
-      return  null;
+
+  String? get_nextButton() {
+    if (stepNumber < stepsMap.length) {
+      return stepsMap[stepNumber + 1]![0];
+    } else {
+      return null;
     }
   }
-  void updateNextButton(String nextbutton){
-    stepsMap[stepNumber+1]![0] = nextbutton;
+
+  void updateNextButton(String nextbutton) {
+    stepsMap[stepNumber + 1]![0] = nextbutton;
     print('update: $stepsMap');
     //mainwidget.changeWidget_for_changedButton(stepsMap[stepNumber+1]![0]);
     //print("passed to man widget");
   }
 
-
-  List<int> getCountTrackers(){
+  List<int> getCountTrackers() {
     //this will return currentpagetracker and stepsmap length
     print(stepNumber);
     print(stepsMap.length);
-    return [stepNumber,stepsMap.length];
+    return [stepNumber, stepsMap.length];
   }
 
   // void insertStep(int stepnum, dynamic value){
 
   //   // {step number, [walk/ride, (step info)]}
-    
+
   //   //di pa nagexist yung step
   //   if(!stepsMap.containsKey(stepnum)){
   //     stepsMap[stepnum]!.add(value);
@@ -3145,14 +3108,12 @@ class DataManager{
 
   //     //walk: walk,landmark,location_name,address,point b
   //     if(stepInfo[0] == 'walk'){
-  //      //change value of an existing value 
+  //      //change value of an existing value
   //     }
   //     else if(stepInfo[0] == 'ride'){
-  //       //change value of an existing value 
+  //       //change value of an existing value
   //     }
 
-     
-    
   //   }
   // }
 
@@ -3348,12 +3309,10 @@ void insertStepsToDB(){
 
 }
 
-
-
-class DialogPopUp{
+class DialogPopUp {
   static final DialogPopUp _instance = DialogPopUp._internal();
 
-  factory DialogPopUp(){
+  factory DialogPopUp() {
     return _instance;
   }
   DialogPopUp._internal();
@@ -3482,8 +3441,8 @@ class DialogPopUp{
                 TextButton(
                   child: const Text("Cancel"),
                   onPressed: () {
-                    // print(data[1]['username']); 
-                    Navigator.of(context).pop(); 
+                    // print(data[1]['username']);
+                    Navigator.of(context).pop();
                   },
                 ),
                 TextButton(
@@ -3497,7 +3456,8 @@ class DialogPopUp{
                     // Navigator.of(context).pop();  
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PreviewOfSteps_Class()),
+                      MaterialPageRoute(
+                          builder: (context) => const PreviewOfSteps_Class()),
                     );
 
                   },

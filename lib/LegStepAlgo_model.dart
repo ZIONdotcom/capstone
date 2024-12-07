@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Leg {
@@ -149,19 +151,20 @@ class SegmentDetails {
 }
 
 class TravelStep {
+  final int FranchiseID;
   final String transportationName; // Name of the transport
-  final double travelTime; // Time taken for this step (in hours)
+  double? travelTime; // Time taken for this step (in hours)
   final LatLng
       babaanLocation; // Location of the 'babaan' (end of this transport)
   final String babaanPlaceName; // Name of the 'babaan' place
   final LatLng
       sakayanLocation; // Location of the 'sakayan' (next transport start)
   final String sakayanPlaceName; // Name of the 'sakayan' place
-  final String
+  List<String?>
       routeName; // The name of the transport route (Point A to Point B)
   final double fare;
   final double travelDistance; // Fare for this travel step
-  final List<LatLng> routePoints;
+  List<LatLng> routePoints;
 
   TravelStep({
     required this.transportationName,
@@ -174,5 +177,18 @@ class TravelStep {
     required this.fare,
     required this.travelDistance,
     required this.routePoints,
+    required this.FranchiseID,
+  });
+}
+
+class TrafficSegment {
+  final String id;
+  final List<LatLng> points;
+  final Color color;
+
+  TrafficSegment({
+    required this.id,
+    required this.points,
+    required this.color,
   });
 }
