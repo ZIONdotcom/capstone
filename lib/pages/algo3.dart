@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:capstone/LegStepAlgo_model.dart';
 import 'package:capstone/terminal_model.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'searchpage.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class algo3 extends StatefulWidget {
   @override
@@ -33,7 +36,7 @@ class algo3 extends StatefulWidget {
 }
 
 class ThirdScreenState extends State<algo3> {
-  final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  final String apiKey = 'AIzaSyDaPQ2CMgegEzWHArO1cKUbcin5xfd7kps';
   late List<TravelStep> steps;
   //polyline v1
 
@@ -53,94 +56,9 @@ class ThirdScreenState extends State<algo3> {
   final Set<Marker> _markers = {}; // To hold the markers
   final Set<Circle> _circles = {}; // To hold the circle markers
 
-  // void _addMarkersAndPolylines() async {
-  //   // Clear previous markers, circles, and polylines
-  //   setState(() {
-  //     _markers.clear();
-  //     _circles.clear();
-  //     _polylines.clear();
-  //   });
-
-  //   // Loop through each step and add polyline between sakayanLocation and babaanLocation
-  //   for (int i = 0; i < steps.length; i++) {
-  //     final step = steps[i];
-  //     if (step.babaanLocation != null) {
-  //       try {
-  //         print('step ??? routepoints: ${step.routePoints} ');
-  //         // // Fetch polyline for the current route with waypoints
-  //         // final polylineEncoded = await getRoutePolyline(
-  //         //   step.sakayanLocation!,
-  //         //   step.babaanLocation!,
-  //         //   step.routePoints ?? [], // Waypoints for the route
-  //         // );
-
-  //         // // Decode polyline
-  //         // final polylinePoints = decodePolyline(polylineEncoded);
-
-  //         // Add polyline to the map for this step
-  //         final polyline = Polyline(
-  //           polylineId: PolylineId('route_$i'),
-  //           points: step.routePoints,
-  //           color: Colors.blue,
-  //           width: 5,
-  //         );
-
-  //         setState(() {
-  //           _polylines.add(polyline);
-  //         });
-
-  //         // Add start and end markers for this route segment
-  //         final startMarker = Marker(
-  //           markerId: MarkerId('start_$i'),
-  //           position: step.sakayanLocation,
-  //           infoWindow: InfoWindow(title: 'Start: ${step.transportationName}'),
-  //           icon:
-  //               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-  //         );
-
-  //         final endMarker = Marker(
-  //           markerId: MarkerId('end_$i'),
-  //           position: step.babaanLocation,
-  //           infoWindow: InfoWindow(title: 'End: ${step.transportationName}'),
-  //           icon:
-  //               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-  //         );
-
-  //         // Add circles to highlight start and end locations
-  //         final startCircle = Circle(
-  //           circleId: CircleId('circleStart_$i'),
-  //           center: step.sakayanLocation,
-  //           radius: 50.0,
-  //           fillColor: Colors.blue.withOpacity(0.3),
-  //           strokeColor: Colors.blue,
-  //           strokeWidth: 2,
-  //         );
-
-  //         final endCircle = Circle(
-  //           circleId: CircleId('circleEnd_$i'),
-  //           center: step.babaanLocation,
-  //           radius: 50.0,
-  //           fillColor: Colors.red.withOpacity(0.3),
-  //           strokeColor: Colors.red,
-  //           strokeWidth: 2,
-  //         );
-
-  //         setState(() {
-  //           _markers.add(startMarker);
-  //           _markers.add(endMarker);
-  //           _circles.add(startCircle);
-  //           _circles.add(endCircle);
-  //         });
-  //       } catch (e) {
-  //         print('Error fetching route polyline for step $i: $e');
-  //       }
-  //     }
-  //   }
-  // }
-
   final Set<Polyline> _polylines = {};
   List<LatLng> polylineCoordinates = [];
-
+/*
   void _addMarkersAndPolylines() async {
     // Clear previous markers, circles, and polylines
     setState(() {
@@ -161,25 +79,56 @@ class ThirdScreenState extends State<algo3> {
           // Create a new list for polyline points, starting with sakayanLocation
           List<LatLng> polylinePoints = [step.sakayanLocation];
 
-          // Filter routePoints to include only those between sakayanLocation and babaanLocation
-          List<LatLng> filteredRoutePoints = [];
+          print(
+              'may laman ba ang route points? ${step.routePoints.length} ano ang laman? ${step.routePoints}');
+
+          //v3
+
           if (step.routePoints != null && step.routePoints.isNotEmpty) {
-            filteredRoutePoints = step.routePoints.where((point) {
-              return _isPointBetweenLocations(
-                  point, step.sakayanLocation, step.babaanLocation);
-            }).toList();
+            // Identify the indices of sakayanLocation and babaanLocation in routePoints
+            int startIndex = step.routePoints.indexWhere((point) =>
+                point.latitude == step.sakayanLocation.latitude &&
+                point.longitude == step.sakayanLocation.longitude);
+            int endIndex = step.routePoints.indexWhere((point) =>
+                point.latitude == step.babaanLocation.latitude &&
+                point.longitude == step.babaanLocation.longitude);
+
+            // Ensure valid indices are found
+            if (startIndex != -1 && endIndex != -1 && startIndex < endIndex) {
+              // Add only the routePoints between sakayanLocation and babaanLocation
+              final filteredRoutePoints =
+                  step.routePoints.sublist(startIndex + 1, endIndex);
+              polylinePoints.addAll(filteredRoutePoints);
+            }
           }
 
-          // Only add the filtered routePoints to the polylinePoints if there are any
-          if (filteredRoutePoints.isNotEmpty) {
-            polylinePoints.addAll(filteredRoutePoints);
-          }
+          // Filter routePoints to include only those between sakayanLocation and babaanLocation
+          // if (step.routePoints != null && step.routePoints.isNotEmpty) {
+          //   final filteredRoutePoints = step.routePoints.where((point) {
+          //     return _isPointBetweenLocations(
+          //         point, step.sakayanLocation, step.babaanLocation);
+          //   }).toList();
+          //   polylinePoints.addAll(filteredRoutePoints);
+          // }
+
+          // List<LatLng> filteredRoutePoints = [];
+          // if (step.routePoints != null && step.routePoints.isNotEmpty) {
+          //   filteredRoutePoints = step.routePoints.where((point) {
+          //     return _isPointBetweenLocations(
+          //         point, step.sakayanLocation, step.babaanLocation);
+          //   }).toList();
+          // }
+
+          // // Only add the filtered routePoints to the polylinePoints if there are any
+          // if (filteredRoutePoints.isNotEmpty) {
+          //   polylinePoints.addAll(filteredRoutePoints);
+          // }
 
           // Add babaanLocation at the end
           polylinePoints.add(step.babaanLocation);
 
           // Ensure no polyline is drawn if the points are just sakayanLocation and babaanLocation (i.e., no intermediate route points)
-          if (polylinePoints.length > 2) {
+          if (polylinePoints.length > 1) {
             print('Final polyline points for step $i: $polylinePoints');
 
             // Create the polyline using the polylinePoints list
@@ -192,7 +141,7 @@ class ThirdScreenState extends State<algo3> {
             );
 
             setState(() {
-              // _polylines.add(polyline);
+              _polylines.add(polyline);
             });
           }
 
@@ -244,22 +193,220 @@ class ThirdScreenState extends State<algo3> {
       }
     }
   }
+*/
+  // Future<void> logToFile(String text) async {
+  //   final directory = await getApplicationDocumentsDirectory();
+  //   //final file = File('${directory.path}/debug.txt');
+  //   print('Directory path: ${directory.path}');
+
+  //   // Append the log to the file
+  //   // await file.writeAsString(text + '\n', mode: FileMode.append);
+  // }
+
+  void _addMarkersAndPolylines() async {
+    // Clear previous markers, circles, and polylines
+    setState(() {
+      _markers.clear();
+      _circles.clear();
+      _polylines.clear();
+    });
+
+    // Loop through each step and add polyline between sakayanLocation and babaanLocation
+    for (int i = 0; i < steps.length; i++) {
+      final step = steps[i];
+      if (step.babaanLocation != null) {
+        try {
+          print('step fid ${step.routeName}');
+          print('step $i: sakayanLocation: ${step.sakayanLocation}');
+          print('step $i: babaanLocation: ${step.babaanLocation}');
+          print('step $i: routePoints: ${step.routePoints}');
+
+          // Create a new list for polyline points, starting with sakayanLocation
+          List<LatLng> polylinePoints = [step.sakayanLocation];
+
+          // Filter the route points to include only those between sakayanLocation and babaanLocation
+          List<LatLng> filteredRoutePoints = _filterRoutePoints(
+              step.routePoints, step.sakayanLocation, step.babaanLocation);
+
+          polylinePoints.addAll(filteredRoutePoints);
+
+          // Add babaanLocation at the end
+          polylinePoints.add(step.babaanLocation);
+
+          // Ensure no polyline is drawn if the points are just sakayanLocation and babaanLocation (i.e., no intermediate route points)
+          if (polylinePoints.length > 1) {
+            print('Final polyline points for step $i: $polylinePoints');
+
+            // Create the polyline using the polylinePoints list
+            final polyline = Polyline(
+              polylineId: PolylineId('route_$i'),
+              points:
+                  polylinePoints, // This now includes sakayanLocation, filtered routePoints, and babaanLocation
+              color: Colors.blue,
+              width: 5,
+            );
+
+            setState(() {
+              _polylines.add(polyline);
+            });
+          }
+
+          for (var point in polylinePoints) {
+            if (point.latitude.isNaN || point.longitude.isNaN) {
+              print("Invalid point detected: $point");
+            }
+          }
+          // Add start and end markers for this route segment
+          final startMarker = Marker(
+            markerId: MarkerId('start_$i'),
+            position: step.sakayanLocation,
+            infoWindow: InfoWindow(title: 'Start: ${step.transportationName}'),
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          );
+
+          final endMarker = Marker(
+            markerId: MarkerId('end_$i'),
+            position: step.babaanLocation,
+            infoWindow: InfoWindow(title: 'End: ${step.transportationName}'),
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          );
+
+          // Add circles to highlight start and end locations
+          final startCircle = Circle(
+            circleId: CircleId('circleStart_$i'),
+            center: step.sakayanLocation,
+            radius: 50.0,
+            fillColor: Colors.blue.withOpacity(0.3),
+            strokeColor: Colors.blue,
+            strokeWidth: 2,
+          );
+
+          final endCircle = Circle(
+            circleId: CircleId('circleEnd_$i'),
+            center: step.babaanLocation,
+            radius: 50.0,
+            fillColor: Colors.red.withOpacity(0.3),
+            strokeColor: Colors.red,
+            strokeWidth: 2,
+          );
+
+          setState(() {
+            _markers.add(startMarker);
+            _markers.add(endMarker);
+            _circles.add(startCircle);
+            _circles.add(endCircle);
+          });
+        } catch (e) {
+          print('Error fetching route polyline for step $i: $e');
+        }
+      }
+    }
+  }
+
+  // List<LatLng> _filterRoutePoints(
+  //     List<LatLng> routePoints, LatLng sakayanLocation, LatLng babaanLocation) {
+  //   // Find the index of sakayanLocation and babaanLocation in the routePoints list
+  //   int startIndex = _findClosestSegment(routePoints, sakayanLocation);
+  //   int endIndex = _findClosestSegment(routePoints, babaanLocation);
+
+  //   // Check if both indices are valid
+  //   if (startIndex == -1 || endIndex == -1) {
+  //     print("One of the points couldn't be found.");
+  //     return [];
+  //   }
+
+  //   // Return the sublist of routePoints between sakayanLocation and babaanLocation
+  //   if (startIndex < endIndex) {
+  //     return routePoints.sublist(startIndex, endIndex + 1);
+  //   } else {
+  //     return routePoints.sublist(endIndex, startIndex + 1);
+  //   }
+  // }
+
+  List<LatLng> _filterRoutePoints(
+      List<LatLng> routePoints, LatLng sakayanLocation, LatLng babaanLocation) {
+    // Find the closest segments to sakayanLocation and babaanLocation in the route
+    int startIndex = _findClosestSegment(routePoints, sakayanLocation);
+    int endIndex = _findClosestSegment(routePoints, babaanLocation);
+
+    // If either sakayanLocation or babaanLocation is not found, return an empty list
+    if (startIndex == -1 || endIndex == -1) {
+      print("One of the points couldn't be found.");
+      return [];
+    }
+
+    // Initialize the result list
+    List<LatLng> filteredPoints = [];
+
+    // Add points from startIndex to endIndex, in the correct direction
+    if (startIndex < endIndex) {
+      // Collect points between the start and end index, including the start and end points
+      for (int i = startIndex; i <= endIndex; i++) {
+        filteredPoints.add(routePoints[i]);
+      }
+    } else {
+      // If sakayanLocation is after babaanLocation, collect points in reverse order
+      for (int i = startIndex; i >= endIndex; i--) {
+        filteredPoints.add(routePoints[i]);
+      }
+    }
+
+    return filteredPoints;
+  }
+
+  int _findClosestSegment(List<LatLng> routePoints, LatLng location) {
+    double minDistance =
+        double.infinity; // Start with an infinitely large distance
+    int closestIndex = -1;
+
+    for (int i = 0; i < routePoints.length; i++) {
+      double distance = _calculateDistance(routePoints[i], location);
+
+      // If this point is closer than the previous closest, update the closest index
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    return closestIndex; // Return the index of the closest point
+  }
+
+  double _calculateDistance(LatLng point1, LatLng point2) {
+    const double R = 6371; // Earth radius in km
+    double lat1 = point1.latitude * pi / 180;
+    double lon1 = point1.longitude * pi / 180;
+    double lat2 = point2.latitude * pi / 180;
+    double lon2 = point2.longitude * pi / 180;
+
+    double dlat = lat2 - lat1;
+    double dlon = lon2 - lon1;
+
+    double a = sin(dlat / 2) * sin(dlat / 2) +
+        cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c; // Return distance in kilometers
+  }
+
+  bool _isLocationClose(LatLng loc1, LatLng loc2, double tolerance) {
+    return (loc1.latitude - loc2.latitude).abs() < tolerance &&
+        (loc1.longitude - loc2.longitude).abs() < tolerance;
+  }
 
 // Helper function to check if a point is between sakayanLocation and babaanLocation
-  bool _isPointBetweenLocations(
-      LatLng point, LatLng sakayanLocation, LatLng babaanLocation) {
-    // Check if the point is between the latitudes and longitudes of sakayanLocation and babaanLocation
-    bool isBetweenLat = (point.latitude >= sakayanLocation.latitude &&
-            point.latitude <= babaanLocation.latitude) ||
-        (point.latitude <= sakayanLocation.latitude &&
-            point.latitude >= babaanLocation.latitude);
-
-    bool isBetweenLng = (point.longitude >= sakayanLocation.longitude &&
-            point.longitude <= babaanLocation.longitude) ||
-        (point.longitude <= sakayanLocation.longitude &&
-            point.longitude >= babaanLocation.longitude);
-
-    return isBetweenLat && isBetweenLng;
+  bool _isPointBetweenLocations(LatLng point, LatLng start, LatLng end) {
+    final latMin =
+        start.latitude <= end.latitude ? start.latitude : end.latitude;
+    final latMax =
+        start.latitude >= end.latitude ? start.latitude : end.latitude;
+    final lngMin =
+        start.longitude <= end.longitude ? start.longitude : end.longitude;
+    final lngMax =
+        start.longitude >= end.longitude ? start.longitude : end.longitude;
+    return (point.latitude >= latMin && point.latitude <= latMax) &&
+        (point.longitude >= lngMin && point.longitude <= lngMax);
   }
 
   List<LatLng> decodePolyline(String encoded) {
@@ -333,6 +480,27 @@ class ThirdScreenState extends State<algo3> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _addMarkersAndPolylines(); // Add polylines, markers, and circles
+
+      /*
+      for (int i = 0; i < steps.length; i++) {
+        final step = steps[i];
+        List<LatLng> polylinePoints = [];
+        polylinePoints.addAll(step.routePoints);
+
+        // Create the polyline using the polylinePoints list
+        final polyline = Polyline(
+          polylineId: PolylineId('route_$i'),
+          points:
+              polylinePoints, // This now includes sakayanLocation, filtered routePoints, and babaanLocation
+          color: Colors.blue,
+          width: 5,
+        );
+
+        setState(() {
+          _polylines.add(polyline);
+        });
+      }
+      */
     });
 
     steps = widget.steps;
@@ -375,8 +543,8 @@ class ThirdScreenState extends State<algo3> {
 
   @override
   void dispose() {
-    _fromController.dispose();
-    _toController.dispose();
+    // _fromController.dispose();
+    // _toController.dispose();
     super.dispose();
   }
 
@@ -570,6 +738,36 @@ class ThirdScreenState extends State<algo3> {
                   ),
                   child: SvgPicture.asset('assets/icons/save.svg'),
                 ),
+                const Spacer(),
+                SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      reportDialog(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(
+                          255, 255, 255, 255), // Button background color
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(30), // Rounded corners
+                      ),
+                      elevation: 5, // Adds shadow to the button
+                      shadowColor: const Color.fromARGB(255, 243, 100, 100)
+                          .withOpacity(0.5), // Shadow color
+                      padding:
+                          EdgeInsets.zero, // Remove padding inside the button
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icons/Alert.svg',
+                      height: 30, // Define a height for the SVG
+                      width: 30,
+                      color: Colors.red,
+                      // Define a width for the SVG
+                    ),
+                  ),
+                ),
               ],
             ),
 
@@ -625,49 +823,8 @@ class ThirdScreenState extends State<algo3> {
             Expanded(
               child: ListView.builder(
                 padding: EdgeInsets.zero,
-                itemCount: steps.length + 1, // +1 for the report button
+                itemCount: steps.length, // +1 for the report button
                 itemBuilder: (context, index) {
-                  if (index == steps.length) {
-                    // Report button
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 20),
-                      child: SizedBox(
-                        height: 38, // Button height
-                        child: ElevatedButton(
-                          onPressed: () {
-                            reportDialog(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(
-                                0xffE84B4B), // Button background color
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(30), // Rounded corners
-                            ),
-                            elevation: 5, // Adds shadow to the button
-                            shadowColor:
-                                Colors.grey.withOpacity(0.5), // Shadow color
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center, // Centers the content
-                            children: [
-                              SvgPicture.asset('assets/icons/Alert.svg'),
-                              const SizedBox(
-                                  width: 8), // Spacing between icon and text
-                              const Text(
-                                'Report this route.',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.black),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
                   // Suggested steps
                   final step = steps[index];
 
@@ -711,7 +868,7 @@ class ThirdScreenState extends State<algo3> {
                   // }
 
                   // Return the proper widget based on the transportation type
-                  if (['jeepney', 'uv express', 'tricycle', 'bus', 'e-jeep']
+                  if (['jeep', 'uv', 'tricycle', 'bus', 'e-jeep']
                       .contains(transpoName.toLowerCase())) {
                     return ride(
                         transpoName, fare, time, route, geton, getoff, picride);
