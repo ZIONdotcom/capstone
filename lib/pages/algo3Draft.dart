@@ -1934,7 +1934,6 @@ int _findNearestStep(LatLng userLocation) {
                       child: _isButtonVisible
                           ? ElevatedButton(
                               onPressed: () {
-                                // Your button click logic
                                 if (!isNavigating) {
                                   _trackUserLocation();
                                   print('ano baa?');
@@ -2110,7 +2109,7 @@ int _findNearestStep(LatLng userLocation) {
 
                   // Retrieve transportation data from the step
                   String transpoName = step.transportationName ?? 'Unknown';
-                  String time = '${step.travelTime.toString()} min' ?? 'N/A';
+                  String time = '${step.travelTime.toString()}' ?? 'N/A';
                   String geton = step.sakayanPlaceName.toString() ?? 'N/A';
                   String instruction = step.sakayanPlaceName ?? 'N/A';
                   String fare = '₱${step.fare.toString()}' ?? 'N/A';

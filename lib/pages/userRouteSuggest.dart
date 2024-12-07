@@ -372,8 +372,6 @@ class _MyWidgetState extends State<Userroutesuggest> {
     });
   }
 
-  late Map<int, StepUser> routeLookup;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -480,42 +478,201 @@ class _MyWidgetState extends State<Userroutesuggest> {
                 ],
               ),
             ),
+//             Expanded(
+//               child: totalTravelTime == 0.0
+//                   ? Center(
+//                       child: CircularProgressIndicator(),
+//                     )
+//                   : ListView.builder(
+//                       itemCount: allPaths.length,
+//                       itemBuilder: (context, index) {
+//                         final route = allPaths[index];
+//                         double totalFare = 0.0;
+
+//                         Map<int, StepUser> routeLookup = {
+//                           for (var routeData in route.steps)
+//                             routeData.id: routeData
+//                         };
+
+//                         for (var step in route.steps) {
+//                           totalFare += step.fare;
+//                         }
+//                         List<String> transportationNamesList = [];
+
+// // Loop through the path list
+//                         for (var route in route.steps) {
+//                           // Access transportationName directly from the route
+//                           String transportationName =
+//                               route.transportationName?.toLowerCase() ?? '';
+
+//                           // Determine the transportation type
+//                           String transpo = '';
+//                           if (['jeep', 'uv', 'bus', 'e-jeep']
+//                               .contains(transportationName)) {
+//                             transpo = '🚍';
+//                           } else if (transportationName == 'tricycle') {
+//                             transpo = '🛺';
+//                           } else {
+//                             transpo = '🚶🏻';
+//                           }
+
+//                           // Add the transportation type to the list
+//                           transportationNamesList.add(transpo);
+//                         }
+
+//                         return suggestRoute(
+//                             transportationNamesList,
+//                             ' ₱${totalFare.toStringAsFixed(2)}',
+//                             ' ${totalTravelTime.toStringAsFixed(2)} mins',
+//                             SvgPicture.asset('assets/icons/bus2.svg'),
+//                             route.steps);
+//                       },
+//                     ),
+//             ),
             Expanded(
               child: totalTravelTime == 0.0
                   ? Center(
                       child: CircularProgressIndicator(),
                     )
-                  : ListView.builder(
-                      itemCount: allPaths.length,
-                      itemBuilder: (context, index) {
-                        final route = allPaths[index];
-                        double totalFare = 0.0;
+                  : FutureBuilder<List<dynamic>>(
+                      future: Future(() {
+                        // Calculate total time and fare for sorting
+                        List<Map<String, dynamic>> sortedRoutes = [];
+                        for (var route in allPaths) {
+                          double totalFare = 0.0;
+                          double totalTimeForPath = 0.0;
 
-                        for (var step in route.steps) {
-                          totalFare += step.fare;
-                        }
-                        List<String> transportationNamesList =
-                            allPaths.map((route) {
-                          var routeData = routeLookup[route.id];
-                          String transpo = '';
-                          if (['jeep', 'uv', 'bus', 'e-jeep'].contains(
-                              routeData?.transportationName.toLowerCase())) {
-                            return '🚍';
-                          } else if (routeData?.transportationName
-                                  .toLowerCase() ==
-                              'tricycle') {
-                            return '🛺';
-                          } else {
-                            return '🚶🏻';
+                          for (var step in route.steps) {
+                            totalFare += step.fare;
+                            totalTimeForPath += step.travelTime ?? 0.0;
                           }
-                        }).toList();
 
-                        return suggestRoute(
-                            transportationNamesList,
-                            ' ₱${totalFare.toStringAsFixed(2)}',
-                            ' ${totalTravelTime.toStringAsFixed(2)} mins',
-                            SvgPicture.asset('assets/icons/bus2.svg'),
-                            route.steps);
+                          sortedRoutes.add({
+                            'route': route,
+                            'totalFare': totalFare,
+                            'totalTime': totalTimeForPath,
+                          });
+                        }
+
+                        // Sort by totalTime first, then by totalFare for the same time
+                        sortedRoutes.sort((a, b) {
+                          if (a['totalTime'] != b['totalTime']) {
+                            return a['totalTime'].compareTo(b['totalTime']);
+                          } else {
+                            return a['totalFare'].compareTo(b['totalFare']);
+                          }
+                        });
+
+                        return sortedRoutes;
+                      }),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        } else if (snapshot.hasError) {
+                          return Center(
+                            child: Text(
+                              'Error: ${snapshot.error}',
+                            ),
+                          );
+                        } else if (snapshot.hasData && snapshot.data != null) {
+                          final sortedRoutes =
+                              snapshot.data! as List<Map<String, dynamic>>;
+
+                          return ListView.builder(
+                            itemCount: sortedRoutes.length,
+                            itemBuilder: (context, index) {
+                              final sortedRoute = sortedRoutes[index];
+                              final route = sortedRoute['route'];
+                              final totalFare = sortedRoute['totalFare'];
+                              final totalTimeForPath = sortedRoute['totalTime'];
+
+                              // Convert totalTimeForPath (in minutes) to hours and minutes
+                              int hours = totalTimeForPath ~/ 60; // Get hours
+                              int minutes = (totalTimeForPath % 60)
+                                  .round(); // Get minutes
+
+                              // Format the time as "X hour(s) Y min(s)"
+                              String formattedTime;
+                              if (hours > 0) {
+                                formattedTime =
+                                    '$hours hour${hours != 1 ? 's' : ''} $minutes minute${minutes != 1 ? 's' : ''}';
+                              } else {
+                                formattedTime =
+                                    '$minutes minute${minutes != 1 ? 's' : ''}';
+                              }
+
+                              // Generate transportation names list
+                              List<String> transportationNamesList = [];
+                              for (var step in route.steps) {
+                                String transportationName =
+                                    step.transportationName?.toLowerCase() ??
+                                        '';
+                                if (['jeep', 'uv', 'bus', 'e-jeep']
+                                    .contains(transportationName)) {
+                                  transportationNamesList.add('🚍');
+                                } else if (transportationName == 'tricycle') {
+                                  transportationNamesList.add('🛺');
+                                } else {
+                                  transportationNamesList.add('🚶🏻');
+                                }
+                              }
+
+                              // Determine SVG icon based on sorting criteria
+                              SvgPicture icon;
+                              bool isSmallestFare = totalFare ==
+                                  sortedRoutes
+                                      .map((e) => e['totalFare'])
+                                      .reduce((value, element) =>
+                                          value < element ? value : element);
+                              bool isSmallestTime = totalTimeForPath ==
+                                  sortedRoutes
+                                      .map((e) => e['totalTime'])
+                                      .reduce((value, element) =>
+                                          value < element ? value : element);
+
+                              if (isSmallestFare && isSmallestTime) {
+                                icon = SvgPicture.asset(
+                                  'assets/icons/best.svg',
+                                  width: 30,
+                                  height: 25,
+                                );
+                              } else if (isSmallestFare && !isSmallestTime) {
+                                icon = SvgPicture.asset(
+                                  'assets/icons/saver2.svg',
+                                  width: 30,
+                                  height: 25,
+                                );
+                              } else if (isSmallestTime && !isSmallestFare) {
+                                icon = SvgPicture.asset(
+                                  'assets/icons/Fast.svg',
+                                  width: 30,
+                                  height: 25,
+                                );
+                              } else {
+                                icon = SvgPicture.asset(
+                                  'assets/icons/Standard.svg',
+                                  width: 30,
+                                  height: 25,
+                                );
+                              }
+
+                              return suggestRoute(
+                                transportationNamesList,
+                                ' ₱${totalFare.toStringAsFixed(2)}',
+                                ' $formattedTime',
+                                icon,
+                                route.steps,
+                              );
+                            },
+                          );
+                        } else {
+                          return Center(
+                            child: Text("No route found"),
+                          );
+                        }
                       },
                     ),
             ),
@@ -604,6 +761,7 @@ class _MyWidgetState extends State<Userroutesuggest> {
               steps: steps,
               origin: _controllerFrom.text,
               destination: _controllerTo.text,
+              traveltime: time,
             ),
           ),
         );

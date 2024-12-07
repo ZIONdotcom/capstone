@@ -19,6 +19,7 @@ class userRouteSuggest2 extends StatefulWidget {
   final String destination;
   final String latOrigin, longOrigin;
   final String latDestination, longDestination;
+  final String traveltime;
 
   const userRouteSuggest2({
     super.key,
@@ -30,6 +31,7 @@ class userRouteSuggest2 extends StatefulWidget {
     required this.steps,
     required this.origin,
     required this.destination,
+    required this.traveltime,
   });
 
   @override
@@ -308,24 +310,24 @@ class _MyWidgetState extends State<userRouteSuggest2> {
                 }
               }
 
-              // if (isnewPoint == false) {
-              //   newPoints.addAll(updatedPolylinePoints);
-              //   double predefinedTravelTime = await getTravelTimeWithTraffic(
-              //       origin: userLocation,
-              //       destination: destinationLocation,
-              //       waypoints: updatedPolylinePoints,
-              //       mode: 'driving');
+              if (isnewPoint == false) {
+                newPoints.addAll(updatedPolylinePoints);
+                // double predefinedTravelTime = await getTravelTimeWithTraffic(
+                //     origin: userLocation,
+                //     destination: destinationLocation,
+                //     waypoints: updatedPolylinePoints,
+                //     mode: 'driving');
 
-              //   trackRemainingTimeWithWaypoints(updatedPolylinePoints,
-              //       destinationLocation, predefinedTravelTime);
-              //   print('are you running?222');
-              //   if (isDisposed) return;
-              //   setState(() {
-              //     isremaining = true;
-              //   });
+                // trackRemainingTimeWithWaypoints(updatedPolylinePoints,
+                //     destinationLocation, predefinedTravelTime);
+                print('are you running?222');
+                if (isDisposed) return;
+                setState(() {
+                  isremaining = true;
+                });
 
-              //   isnewPoint = true;
-              // }
+                isnewPoint = true;
+              }
 
               if (!_isRemoveStepDone) {
                 // Add points from subsequent steps
@@ -425,6 +427,8 @@ class _MyWidgetState extends State<userRouteSuggest2> {
       }
     });
   }
+
+  bool isremaining = false;
 
   //--------------------------------------------------------------
   int _findNearestStep(LatLng userLocation) {
@@ -657,8 +661,11 @@ class _MyWidgetState extends State<userRouteSuggest2> {
     });
   }
 
+  bool _isButtonVisible = true;
+
   @override
   Widget build(BuildContext context) {
+    String timetotal = widget.traveltime;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
@@ -666,6 +673,7 @@ class _MyWidgetState extends State<userRouteSuggest2> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /*
             Row(
               children: [
                 Container(
@@ -777,19 +785,75 @@ class _MyWidgetState extends State<userRouteSuggest2> {
                 ),
               ],
             ),
-            SizedBox(
-              height: 300,
-              width: double.infinity,
-              child: GoogleMap(
-                initialCameraPosition: _initialCameraPosition,
-                onMapCreated: (GoogleMapController controller) {
-                  _controller = controller;
-                  _isMapCreated = true;
-                },
-                markers: _markers,
-                circles: _circles,
-                polylines: _polylines,
-              ),
+          */
+            Stack(
+              children: [
+                // Google Map widget
+                SizedBox(
+                  width: double.infinity,
+                  height: 400,
+                  child: GoogleMap(
+                    onMapCreated: (GoogleMapController controller) {
+                      _controller = controller;
+                      _isMapCreated = true;
+                      // _setMarkers();
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(14.831582, 120.903786),
+                      zoom: 11.5,
+                    ),
+                    markers: _markers,
+                    circles: _circles,
+                    polylines: _polylines,
+                  ),
+                ),
+                if (!isremaining)
+                  Positioned(
+                      top: 20, // Adjust the position as needed
+                      left: 20,
+                      child: Column(
+                        children: [
+                          // ValueListenableBuilder<double>(
+                          //   valueListenable: remainingTimeNotifier,
+                          //   builder: (context, timetotal, child) {
+
+                          Container(
+                            height: 35,
+                            width: 234,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Color(0xFFc2d0ff), // Border color
+                                width: 1.0, // Border width
+                              ),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xff1D1617).withOpacity(0.11),
+                                  blurRadius: 4,
+                                  spreadRadius: 0.2,
+                                ),
+                              ],
+                            ),
+                            child: TextButton(
+                              onPressed: () {},
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                foregroundColor: Color(0xff1F41BB),
+                              ),
+                              child: Text(
+                                'Travel Time: $timetotal mins',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ),
+                          //   },
+                          // ),
+                        ],
+                      )),
+              ],
             ),
             Expanded(
               // Ensure remaining height is bounded
@@ -827,54 +891,59 @@ class _MyWidgetState extends State<userRouteSuggest2> {
                         Row(
                           children: [
                             SizedBox(
-                              // width: 25,
                               height: 29,
-
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // reportDialog(context);
-                                  // setState(() {
-                                  if (!isNavigating) {
-                                    _trackUserLocation();
-                                    print('ano baa?');
-                                  }
-
-                                  //  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255,
-                                      255, 255, 255), // Button background color
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        30), // Rounded corners
-                                  ),
-                                  elevation: 5, // Adds shadow to the button
-                                  shadowColor:
-                                      const Color.fromARGB(255, 243, 100, 100)
-                                          .withOpacity(0.5), // Shadow color
-                                  padding: EdgeInsets
-                                      .zero, // Remove padding inside the button
-                                ),
-                                child: const Text('Start'),
-                              ),
+                              child: _isButtonVisible
+                                  ? ElevatedButton(
+                                      onPressed: () {
+                                        if (!isNavigating) {
+                                          _trackUserLocation();
+                                          print('ano baa?');
+                                          setState(() {
+                                            _isButtonVisible =
+                                                false; // Hide the button after it's clicked
+                                          });
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color.fromARGB(
+                                            255,
+                                            255,
+                                            255,
+                                            255), // Button background color
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              30), // Rounded corners
+                                        ),
+                                        elevation:
+                                            5, // Adds shadow to the button
+                                        shadowColor: const Color.fromARGB(
+                                                255, 243, 100, 100)
+                                            .withOpacity(0.5), // Shadow color
+                                        padding: EdgeInsets
+                                            .zero, // Remove padding inside the button
+                                      ),
+                                      child: const Text('Start'),
+                                    )
+                                  : Container(), // If the button is not visible, display an empty container
                             ),
+
                             const SizedBox(width: 10),
-                            Container(
-                              margin: const EdgeInsets.only(left: 30),
-                              alignment: Alignment.center,
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: SvgPicture.asset(
-                                'assets/icons/save.svg',
-                                height: 25, // Define a height for the SVG
-                                width: 25, // Define a width for the SVG
-                                color: Colors.red,
-                              ),
-                            ),
+                            // Container(
+                            //   margin: const EdgeInsets.only(left: 30),
+                            //   alignment: Alignment.center,
+                            //   width: 30,
+                            //   height: 30,
+                            //   decoration: BoxDecoration(
+                            //     color: Colors.white,
+                            //     borderRadius: BorderRadius.circular(10),
+                            //   ),
+                            //   child: SvgPicture.asset(
+                            //     'assets/icons/save.svg',
+                            //     height: 25, // Define a height for the SVG
+                            //     width: 25, // Define a width for the SVG
+                            //     color: Colors.red,
+                            //   ),
+                            // ),
                             // SizedBox(
                             //   width: 25,
                             //   height: 25,
@@ -966,7 +1035,7 @@ class _MyWidgetState extends State<userRouteSuggest2> {
                           String transpoName =
                               step.transportationName ?? 'Unknown';
                           String time =
-                              '${step.travelTime.toString()} min' ?? 'N/A';
+                              '${step.travelTime.toString()}' ?? 'N/A';
                           //  String geton = step.instructions.toString() ?? 'N/A';
                           String instruction = step.instructions ?? 'N/A';
                           String fare = '₱${step.fare.toString()}' ?? 'N/A';
@@ -1142,11 +1211,11 @@ class _MyWidgetState extends State<userRouteSuggest2> {
                             color: textColor), // Adjust text color for contrast
                       ),
                       const Spacer(),
-                      Text(
-                        time,
-                        style: TextStyle(
-                            color: textColor), // Adjust text color for contrast
-                      ),
+                      // Text(
+                      //   time,
+                      //   style: TextStyle(
+                      //       color: textColor), // Adjust text color for contrast
+                      // ),
                     ],
                   ),
 
