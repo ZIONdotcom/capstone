@@ -194,12 +194,12 @@ class _TravelPlanState extends State<travelPlan> {
                       if (selectedLocations.length >= 2)
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => Travelplanmap(
-                                      selectedLocations: selectedLocations)),
-                            );
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //       // builder: (context) => Travelplanmap(
+                            //       //     selectedLocations: selectedLocations)),
+                            // );
                           },
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white,

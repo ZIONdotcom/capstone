@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:capstone/pages/algodraft.dart';
+import 'package:capstone/pages/routeFinderAlgo.dart';
 import 'package:capstone/pages/test.dart';
 import 'package:uuid/uuid.dart';
+import 'package:capstone/pages/userRouteSuggest.dart';
+import 'travelPlanMap.dart';
 
 class RouteFinder extends StatefulWidget {
   const RouteFinder({super.key});
@@ -24,7 +29,7 @@ class _RouteFinderState extends State<RouteFinder> {
   FocusNode fromFocusNode = FocusNode();
   FocusNode toFocusNode = FocusNode();
   List<String> locationSuggestions = [];
-  final apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  final apiKey = 'AIzaSyC88-Wkb5_LmPU5OCQwPOMDTry3RGh1J00';
   late String lat, long;
   late String lat_origin, long_origin, lat_destination, long_destination;
 
@@ -139,11 +144,11 @@ class _RouteFinderState extends State<RouteFinder> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       "Choose a route Suggesting option:",
                       style: TextStyle(
                         fontSize: 13,
@@ -154,7 +159,7 @@ class _RouteFinderState extends State<RouteFinder> {
                 ),
                 const SizedBox(height: 30),
                 const SizedBox(height: 20),
-                Row(
+                Column(
                   mainAxisAlignment:
                       MainAxisAlignment.spaceBetween, // Space out the buttons
                   children: [
@@ -182,7 +187,7 @@ class _RouteFinderState extends State<RouteFinder> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => RouteFinderAlgodraft(
+                            builder: (context) => RouteFinderAlgo(
                               latOrigin: lat_origin,
                               longOrigin: long_origin,
                               latDestination: lat_destination,
@@ -194,6 +199,42 @@ class _RouteFinderState extends State<RouteFinder> {
                         );
                       },
                     ),
+                    TextButton(
+                      child: const Text("User Route Suggest"),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Userroutesuggest(
+                              latOrigin: lat_origin,
+                              longOrigin: long_origin,
+                              latDestination: lat_destination,
+                              longDestination: long_destination,
+                              destinationName: fromController.text,
+                              originName: toController.text,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // TextButton(
+                    //   child: const Text("Edit Map"),
+                    //   onPressed: () {
+                    //     Navigator.push(
+                    //       context,
+                    //       MaterialPageRoute(
+                    //         builder: (context) => Travelplanmap(
+                    //           latOrigin: lat_origin,
+                    //           longOrigin: long_origin,
+                    //           latDestination: lat_destination,
+                    //           longDestination: long_destination,
+                    //           destinationName: fromController.text,
+                    //           originName: toController.text,
+                    //         ),
+                    //       ),
+                    //     );
+                    //   },
+                    // ),
                   ],
                 ),
               ],
@@ -235,6 +276,8 @@ class _RouteFinderState extends State<RouteFinder> {
         'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$text&key=$apiKey&components=country:ph';
     final response = await http.get(Uri.parse(url));
 
+    print('api calls places');
+
     if (response.statusCode == 200) {
       final List<dynamic> predictions =
           json.decode(response.body)['predictions'];
@@ -247,6 +290,18 @@ class _RouteFinderState extends State<RouteFinder> {
         locationSuggestions = ['Failed to fetch suggestions'];
       });
     }
+  }
+
+  Timer? _debounce;
+
+  void onTextChanged(String text) {
+    if (_debounce?.isActive ?? false) {
+      _debounce?.cancel();
+    }
+
+    _debounce = Timer(Duration(milliseconds: 500), () {
+      fetchSuggestions(text);
+    });
   }
 
   //RouteFinder || get LatLong of searched Location
@@ -519,7 +574,7 @@ class _RouteFinderState extends State<RouteFinder> {
                   : null,
             ),
             onChanged: (text) {
-              fetchSuggestions(text);
+              onTextChanged(text);
             },
           ),
         ),

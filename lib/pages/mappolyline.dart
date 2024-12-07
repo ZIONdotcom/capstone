@@ -61,8 +61,8 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _getRoute() async {
-    final start = const LatLng(14.7538, 120.9553); // Example starting point
-    final end = const LatLng(14.96038166, 120.8903083); // Example ending point
+    const start = LatLng(14.7538, 120.9553); // Example starting point
+    const end = LatLng(14.96038166, 120.8903083); // Example ending point
 
     try {
       final polylineEncoded = await getRoutePolyline(start, end);

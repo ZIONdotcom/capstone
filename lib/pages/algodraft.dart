@@ -48,7 +48,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
   List<Map<String, dynamic>> selectedLegs = [];
   GoogleMapController? mapController;
   Set<Marker> markers = {};
-  final String apiKey = 'AIzaSyBcUDWZDnJBOX_Q5IOqDJi60RuqJy1-ZkY';
+  final String apiKey = '';
   late double originlat, originlong, destinationlat, destinationlong;
   late LatLng originLocation;
   late LatLng destinationLocation;
@@ -193,8 +193,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
       // Print PathDetails for debugging
       for (var path in pathDetails) {
-        print(
-            "Path Detail - Franchise ID: ${path.franchiseId}, Route Name: ${path.routeName}, Estimated Time: ${path.estimatedTime}, Distance: ${path.distance}, Fare: ${path.fare}");
+        // print(
+        //     "Path Detail - Franchise ID: ${path.franchiseId}, Route Name: ${path.routeName}, Estimated Time: ${path.estimatedTime}, Distance: ${path.distance}, Fare: ${path.fare}");
       }
     } catch (e) {
       print("Error creating PathDetails: $e");
@@ -246,8 +246,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
       // Print each RouteDetail for debugging
       for (var detail in details) {
-        print(
-            "Franchise ID: ${detail.franchiseId} | Transportation Name: ${detail.transportationName} | Regular Fare: ${detail.regularFare} | Discounted Fare: ${detail.discountedFare} | Point A: ${detail.pointA} | Point B: ${detail.pointB} | Terminal ID: ${detail.terminalId}");
+        // print(
+        //     "Franchise ID: ${detail.franchiseId} | Transportation Name: ${detail.transportationName} | Regular Fare: ${detail.regularFare} | Discounted Fare: ${detail.discountedFare} | Point A: ${detail.pointA} | Point B: ${detail.pointB} | Terminal ID: ${detail.terminalId}");
       }
     } catch (e) {
       print("Error fetching route details: $e");
@@ -269,6 +269,30 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     routeDetails = await fetchRouteDetails(fID);
   }
 
+  // Future<List<LatLng>> fetchRouteCoordinates(
+  //     LatLng start, LatLng end, List<LatLng> waypoints) async {
+  //   String waypointsString = waypoints
+  //       .map((point) => '${point.latitude},${point.longitude}')
+  //       .join('|');
+  //   final String url =
+  //       'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&waypoints=optimize:false|$waypointsString&key=$apiKey';
+
+  //   final response = await http.get(Uri.parse(url));
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body);
+  //     print(data); // Log the response for debugging
+
+  //     if (data['routes'].isNotEmpty) {
+  //       final route = data['routes'][0]['overview_polyline']['points'];
+  //       return decodePolyline(route);
+  //     } else {
+  //       throw Exception('Failed to get directions: ZERO_RESULTS');
+  //     }
+  //   } else {
+  //     throw Exception('Failed to load directions');
+  //   }
+  // }
+
   Future<List<LatLng>> fetchRouteCoordinates(
       LatLng start, LatLng end, List<LatLng> waypoints) async {
     String waypointsString = waypoints
@@ -284,7 +308,14 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
       if (data['routes'].isNotEmpty) {
         final route = data['routes'][0]['overview_polyline']['points'];
-        return decodePolyline(route);
+        List<LatLng> decodedPoints = decodePolyline(route);
+
+        // Ensure the start and end points are included
+        if (decodedPoints.isNotEmpty &&
+            (decodedPoints.first != start || decodedPoints.last != end)) {
+          decodedPoints = [start, ...decodedPoints, end];
+        }
+        return decodedPoints;
       } else {
         throw Exception('Failed to get directions: ZERO_RESULTS');
       }
@@ -349,8 +380,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         int transportationID = routeSuggest.transportationID;
 
         // Debugging: Print parsed franchise ID, pointA, pointB, and waypoints
-        print(
-            "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID ");
+        // print(
+        //     "Franchise ID: $franchiseID, Point A: $pointA, Point B: $pointB, Waypoints: $waypoints, transporation id: $transportationID, terminal id: $terminalID ");
 
         // Fetch the route coordinates using Google Directions API, including waypoints
         List<LatLng> routeCoordinates =
@@ -386,6 +417,42 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     }
   }
 
+  List<LatLng> yey = [];
+  final Set<Polyline> _polylines = {};
+
+  Future<void> testPolyline() async {
+    List<RouteSuggest> route = await fetchRoutesFromAPI();
+    for (var ey in route) {
+      if (ey.franchiseID == 6) {
+        print('try try try ${ey.franchiseID}');
+        Polyline polyline = Polyline(
+          polylineId:
+              PolylineId(ey.franchiseID.toString()), // Unique ID for each route
+          points: ey.routeCoordinates,
+          color: Colors.blue, // Customize the polyline color
+          width: 5,
+        );
+        setState(() {
+          _polylines.add(polyline);
+        });
+      }
+
+      if (ey.franchiseID == 4) {
+        print('try try try ${ey.franchiseID}');
+        Polyline polyline = Polyline(
+          polylineId:
+              PolylineId(ey.franchiseID.toString()), // Unique ID for each route
+          points: ey.routeCoordinates,
+          color: Colors.red, // Customize the polyline color
+          width: 2,
+        );
+        setState(() {
+          _polylines.add(polyline);
+        });
+      }
+    }
+  }
+
   Future<List<Terminal>> fetchTerminals() async {
     final response = await http.get(Uri.parse(
         'https://rutaco.online/routeFinderPhp/getTerminalLocation.php'));
@@ -412,8 +479,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       LatLng terminalLocation = LatLng(terminal.latitude, terminal.longitude);
       double distance = calculateDistances(origin, terminalLocation);
 
-      print(
-          'Threshold: $distance , Distance: $distance , Terminal: ${terminal.latitude}, ${terminal.longitude}, Location: $origin');
+      // print(
+      //   'Threshold: $distance , Distance: $distance , Terminal: ${terminal.latitude}, ${terminal.longitude}, Location: $origin');
 
       // Check if terminal is within the minimum distance threshold
       if (proximityThreshold > distance) {
@@ -451,8 +518,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
           // Check if the destination is near point B
           if (distanceToPointB <= proximityThreshold) {
-            print(
-                "Destination is near the endpoint (point_B) of Terminal ID: ${route.terminalID}");
+            // print(
+            //     "Destination is near the endpoint (point_B) of Terminal ID: ${route.terminalID}");
             nearEndTerminal.add(route);
           }
 
@@ -470,8 +537,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
           // If the destination is on the route, add it to alongRoutesTerminal
           if (destinationOnRouteTerminal) {
-            print(
-                "Destination lies along the route of Terminal ID: ${route.terminalID}");
+            // print(
+            //     "Destination lies along the route of Terminal ID: ${route.terminalID}");
             alongRoutesTerminal.add(route);
           }
         }
@@ -481,17 +548,17 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     // Display the results
     if (nearEndTerminal.isNotEmpty || alongRoutesTerminal.isNotEmpty) {
       if (alongRoutesTerminal.isNotEmpty) {
-        print("Routes with destination along the route:");
+        // print("Routes with destination along the route:");
         for (var route in alongRoutesTerminal) {
-          print("Franchise ID: ${route.franchiseID}");
+          //  print("Franchise ID: ${route.franchiseID}");
         }
       }
 
       if (nearEndTerminal.isNotEmpty) {
-        print("Nearby terminals with point B near the destination:");
+        // print("Nearby terminals with point B near the destination:");
         for (var route in nearEndTerminal) {
-          print(
-              "Terminal ID: ${route.terminalID}, Franchise ID: ${route.franchiseID}");
+          // print(
+          //     "Terminal ID: ${route.terminalID}, Franchise ID: ${route.franchiseID}");
         }
       }
     } else {
@@ -509,8 +576,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       double distanceToPointB = calculateDistances(destination, route.pointB);
       //check if destination is near the point b of terminal
       if (distanceToPointB <= proximityThreshold) {
-        print(
-            "Destination is near the endpoint (point_B) of route ID: ${route.franchiseID}");
+        // print(
+        //     "Destination is near the endpoint (point_B) of route ID: ${route.franchiseID}");
         routesEnd.add(route);
         continue; // No need to check route points if near endpoint
       }
@@ -524,8 +591,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         // If destination is within the route proximity threshold, add route
         if (distanceToRoutePoint <= routeProximityThreshold) {
           destinationOnRoute = true;
-          print(
-              "Destination lies along the route of route ID: ${route.franchiseID}");
+          // print(
+          //     "Destination lies along the route of route ID: ${route.franchiseID}");
           alongRouteDestination.add(route);
         }
       }
@@ -535,16 +602,16 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     if (routesEnd.isNotEmpty || alongRouteDestination.isNotEmpty) {
       // Display routes ending near the destination
       if (routesEnd.isNotEmpty) {
-        print("Routes ending near the destination:");
+        //  print("Routes ending near the destination:");
       }
 
       // Display routes passing near the destination
       if (alongRouteDestination.isNotEmpty) {
-        print("Routes passing along the destination:");
+        //  print("Routes passing along the destination:");
       }
     } else {
       // No nearby routes found
-      print("No routes nearby");
+      //print("No routes nearby");
     }
   }
 
@@ -587,9 +654,9 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         }
       }
       // Optionally log distances for debugging
-      print('Route Franchise ID: ${route.franchiseID}');
-      print('Distance to Point A: $distanceToPointA meters');
-      print('Distance to Point B: $distanceToPointB meters');
+      // print('Route Franchise ID: ${route.franchiseID}');
+      // print('Distance to Point A: $distanceToPointA meters');
+      // print('Distance to Point B: $distanceToPointB meters');
     }
     if (nearbyRoutes.isNotEmpty) {
       // Suggest these routes to the user
@@ -602,8 +669,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
   void displayRoutes(List<RouteSuggest> nearbyRoutes) {
     for (var route in nearbyRoutes) {
-      print(
-          'Nearby Route: Franchise ID: ${route.franchiseID}, Points: ${route.pointA}, ${route.pointB}');
+      // print(
+      //     'Nearby Route: Franchise ID: ${route.franchiseID}, Points: ${route.pointA}, ${route.pointB}');
       // You can update your UI here
     }
   }
@@ -778,6 +845,40 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             0.0); // Return valid point if within threshold, otherwise (0,0)
   }
 
+  LatLng findClosestPointToOrigin(
+      List<LatLng> routeCoords, LatLng originLocation, double threshold) {
+    LatLng closestPoint = LatLng(0.0, 0.0); // Default value
+    double minDistance = double.infinity; // Start with a very large distance
+
+    // Loop through all route coordinates
+    for (var coord in routeCoords) {
+      double distance =
+          calculateDistances(coord, originLocation); // Calculate distance
+
+      // Log the distance to help with debugging
+      // print("Checking coordinate: ${coord.latitude}, ${coord.longitude}");
+      //print("Distance from origin: $distance");
+
+      // If distance is smaller than the threshold and smaller than the current minDistance
+      if (distance < threshold && distance < minDistance) {
+        minDistance = distance; // Update the closest point
+        closestPoint = LatLng(coord.latitude, coord.longitude);
+        // print(
+        //     "New closest point: ${coord.latitude}, ${coord.longitude} at distance: $distance");
+      }
+    }
+
+    // Log result
+    if (minDistance < threshold) {
+      // print(
+      //     "Closest point found: ${closestPoint.latitude}, ${closestPoint.longitude}");
+      return closestPoint;
+    } else {
+      // print("No valid point found within the threshold of $threshold meters.");
+      return LatLng(0.0, 0.0);
+    }
+  }
+
 // Helper function to determine if two coordinates are within a threshold of proximity
   bool isWithinThreshold(LatLng coord1, LatLng coord2) {
     // Threshold to check if two coordinates are close enough to be considered overlapping
@@ -802,6 +903,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       for (var destinationRoute in routesEnd) {
         String routePairKey =
             '${originRoute.franchiseID}-${destinationRoute.franchiseID}';
+
+        print("checking apir key:$routePairKey ");
 
         if (!addedRoutePairs.contains(routePairKey)) {
           addedRoutePairs.add(routePairKey);
@@ -835,6 +938,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             print(
                 "Transfer point found between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID} at meeting point: $meetingPoint");
           } else if (areNearRoutes && !areRoutesMeeting) {
+            var meetingPoint = findMeetingPoint(originRoute, destinationRoute);
+
             LatLng closestPoint = findClosestPointIfNear(
                 originRoute.routeCoordinates,
                 destinationRoute.routeCoordinates,
@@ -850,10 +955,17 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             );
             transferPoints.add(walkTransferPoint);
             print(
-                "Walk added between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID}");
+                "2 Transfer point found between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID} at meeting point: $meetingPoint");
+            // print(
+            //     "Walk added between Route ${originRoute.franchiseID} and Route ${destinationRoute.franchiseID}");
           }
         }
       }
+    }
+
+    for (var transferPoint in transferPoints) {
+      print(
+          "All transfer points found: From Route: ${transferPoint.fromRoute.franchiseID}, To Route: ${transferPoint.toRoute.franchiseID}, Location: ${transferPoint.transferLocation}, Type: ${transferPoint.transferType}");
     }
 
     return transferPoints;
@@ -871,11 +983,11 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       print("No nearby or destination routes to check for transfers.");
       return [];
     }
-
+/*
     List<List<RouteSuggest>> findPath(
-        RouteSuggest startRoute,
+        RouteSuggest startRoute, // nearby routes
         LatLng destination,
-        List<RouteSuggest> allRoutes,
+        List<RouteSuggest> allRoutes, //lahat ng route from api
         double routeProximityThreshold) {
       List<List<RouteSuggest>> paths = [];
       Queue<List<RouteSuggest>> queue = Queue();
@@ -918,6 +1030,70 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           }
         }
       }
+      print("Paths without filtering: $paths ");
+      return paths;
+    }
+*/
+    List<List<RouteSuggest>> findPath(
+        RouteSuggest startRoute, // nearby routes
+        LatLng destination,
+        List<RouteSuggest> allRoutes, // all routes from API
+        double routeProximityThreshold) {
+      List<List<RouteSuggest>> paths = [];
+      Queue<List<RouteSuggest>> queue = Queue();
+      Set<int> seenRoutes = Set(); // To keep track of explored routes
+      queue.add([startRoute]);
+
+      while (queue.isNotEmpty) {
+        List<RouteSuggest> currentPath = queue.removeFirst();
+        RouteSuggest currentRoute = currentPath.last;
+
+        // Check if any route point is close enough to the destination
+        for (int i = 0; i < currentRoute.routeCoordinates.length; i++) {
+          var routePoint = currentRoute.routeCoordinates[i];
+
+          if (calculateDistances(routePoint, destination) <=
+              routeProximityThreshold) {
+            paths.add(currentPath); // Path to destination found
+            print("Path found to destination at $routePoint");
+            continue; // Continue finding other paths
+          }
+        }
+
+        // Find possible transfer points from current route
+        List<TransferPoint> transferPoints =
+            findTransferPoints([currentRoute], allRoutes);
+        Map<int, CombinedRouteData> routeLookup = {
+          for (var routeData in combinedRoutes) routeData.franchiseID: routeData
+        };
+
+        // Add each transfer route to the path queue for further exploration
+        for (var transfer in transferPoints) {
+          if (!currentPath.contains(transfer.toRoute) &&
+              !seenRoutes.contains(transfer.toRoute.franchiseID)) {
+            var routeData = routeLookup[transfer.toRoute.franchiseID];
+            if (routeData != null) {
+              // Add the transfer route to the current path and add to the queue for further exploration
+              List<RouteSuggest> newPath = List.from(currentPath);
+              newPath.add(transfer.toRoute);
+              queue.add(newPath);
+              seenRoutes
+                  .add(transfer.toRoute.franchiseID); // Mark as considered
+            }
+          }
+        }
+      }
+
+      print("Paths without filtering: $paths");
+      for (var path in paths) {
+        // Create a list of franchise IDs for the current path
+        List<String> franchiseIDs =
+            path.map((route) => route.franchiseID.toString()).toList();
+
+        // Join the franchise IDs with " -> " and print the result
+        print('pathssssssssssssssssssssssss: ${franchiseIDs.join(" -> ")}');
+      }
+
       return paths;
     }
 
@@ -926,6 +1102,106 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       List<List<RouteSuggest>> pathsFromOrigin = findPath(
           originRoute, destination, routesEnd, routeProximityThreshold);
 
+      LatLng sakayanLocationInitial;
+      LatLng babaanLocationInitial;
+
+      LatLng userDestination = LatLng(
+        double.parse(widget.latDestination),
+        double.parse(widget.longDestination),
+      );
+
+//adding of condition if traveled idstance is less 300, remove that step.
+      for (var path in pathsFromOrigin) {
+        for (int i = 0; i < path.length - 1; i++) {
+          var nextRoute = path[i + 1];
+          RouteSuggest route = path[i];
+
+          if (i == 0) {
+            // First route: Set babaanLocation to where it meets the next route
+            if (nextRoute != null) {
+              LatLng meetingPoint = findMeetingPoint(route, nextRoute);
+              if (meetingPoint.latitude == 0.0 &&
+                  meetingPoint.longitude == 0.0) {
+                // Routes are nearby but not crossing
+                // Set babaanLocation to the end of the current route where it gets close to the next route
+                babaanLocationInitial = findClosestPointIfNear(
+                    route.routeCoordinates,
+                    nextRoute.routeCoordinates,
+                    proximityThreshold);
+              } else {
+                // Routes are crossing, use the intersection point
+                babaanLocationInitial = meetingPoint;
+              }
+            } else {
+              babaanLocationInitial =
+                  userDestination; // If no next route, set to user destination
+            }
+
+            // Set sakayanLocation to where the current route meets the origin
+            sakayanLocationInitial =
+                findMeetingPointWithOrigin(route, originLocation);
+          } else if (nextRoute != null) {
+            // Intermediate routes: Check for nearby but non-crossing routes
+            RouteSuggest previousRoute = path[i - 1];
+            LatLng meetingPoint = findMeetingPoint(previousRoute, route);
+
+            if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
+              // Routes are nearby but not crossing
+              // Set sakayanLocation as the first coordinate of the current route where it gets close to the previous route
+              sakayanLocationInitial = findClosestPointIfNear(
+                  route.routeCoordinates,
+                  previousRoute.routeCoordinates,
+                  proximityThreshold);
+
+              // Set babaanLocation as the end of the current route where it gets close to the next route
+              babaanLocationInitial = findClosestPointIfNear(
+                  route.routeCoordinates,
+                  nextRoute.routeCoordinates,
+                  proximityThreshold);
+            } else {
+              // Routes are crossing, use the intersection point
+              sakayanLocationInitial = meetingPoint;
+              //babaanLocationInitial = meetingPoint;
+              babaanLocationInitial = findClosestPointIfNear(
+                  route.routeCoordinates,
+                  nextRoute.routeCoordinates,
+                  proximityThreshold);
+            }
+          } else {
+            // Last route: sakayanLocation is the point it meets the previous route
+            RouteSuggest previousRoute = path[i - 1];
+            LatLng meetingPoint = findMeetingPoint(previousRoute, route);
+
+            if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
+              // Routes are nearby but not crossing
+              sakayanLocationInitial = findClosestPointIfNear(
+                  route.routeCoordinates,
+                  previousRoute.routeCoordinates,
+                  proximityThreshold);
+            } else {
+              // Routes are crossing, use the intersection point
+              sakayanLocationInitial = meetingPoint;
+            }
+
+            babaanLocationInitial =
+                userDestination; // Set babaan for last route as the destination
+          }
+
+          double distanceBetweenSakayanAndBabaan =
+              calculateDistances(sakayanLocationInitial, babaanLocationInitial);
+          print(
+              'distance sakayan at babaan = $distanceBetweenSakayanAndBabaan id franchise: ${route.franchiseID}');
+
+          // If the distance between sakayan and babaan is less than 100 meters, skip adding this step
+          if (distanceBetweenSakayanAndBabaan < 300) {
+            print("path removed below 300: ${path[i]}");
+            path.removeAt(i); // Remove the current route step from the path
+            i--; // Adjust index after removal to avoid skipping the next element
+          }
+        }
+      }
+
+/*
       for (var pathFromOrigin in pathsFromOrigin) {
         // Check for gaps between consecutive routes in the path and insert walking step if needed
         List<RouteSuggest> pathWithWalk = [];
@@ -1022,6 +1298,184 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           print("Duplicate path ignored: $pathString");
         }
       }
+
+*/
+
+// Adding walking routes to paths
+      for (var pathFromOrigin in pathsFromOrigin) {
+        // Check for gaps between consecutive routes in the path and insert walking step if needed
+        List<RouteSuggest> pathWithWalk = [];
+
+        LatLng invalid = LatLng(0.0, 0.0);
+
+        // Iterate through the path for debugging purposes
+        for (var route in pathFromOrigin) {
+          String pathStringWalk = pathWithWalk
+              .map((route) => route.franchiseID.toString())
+              .join(' -> ');
+          print("very start all franchise IDs in path: $pathStringWalk");
+        }
+
+        if (pathFromOrigin.length == 1) {
+          var currentRoute = pathFromOrigin[0];
+
+          // Check if there is a need for a walking route at the beginning
+          LatLng nearestMeet = findClosestPointToOrigin(
+              currentRoute.routeCoordinates,
+              originLocation,
+              proximityThreshold);
+
+          double distance = calculateDistances(nearestMeet, originLocation);
+          print('Origin distance $distance route: ${currentRoute.franchiseID}');
+
+          if (nearestMeet != invalid && distance > 0.0001) {
+            RouteSuggest walkingRoute = RouteSuggest(
+              pointA: originLocation,
+              pointB: nearestMeet,
+              waypoints: [originLocation, nearestMeet],
+              terminalID: -1, // Special ID for walking step
+              transportationID: 6, // ID for walking transport type
+              routeCoordinates: [originLocation, nearestMeet],
+              franchiseID: -1, // Special ID for walking step
+            );
+
+            pathWithWalk.add(walkingRoute);
+          }
+
+          // Add the only route (no walking needed)
+          pathWithWalk.add(currentRoute);
+
+          // Check if there is a need for a walking route at the destination
+          LatLng nearestMeetDestination = findClosestPointToOrigin(
+              currentRoute.routeCoordinates,
+              destinationLocation,
+              proximityThreshold);
+
+          double distDest =
+              calculateDistances(nearestMeetDestination, destinationLocation);
+
+          print(
+              'Destination distance $distDest route: ${currentRoute.franchiseID}');
+
+          if (nearestMeetDestination != invalid && distDest > 0.0001) {
+            RouteSuggest walkingRouteDest = RouteSuggest(
+              pointA: nearestMeetDestination,
+              pointB: destinationLocation,
+              waypoints: [nearestMeetDestination, destinationLocation],
+              terminalID: -1, // Special ID for walking step
+              transportationID: 6, // ID for walking transport type
+              routeCoordinates: [nearestMeetDestination, destinationLocation],
+              franchiseID: -1, // Special ID for walking step
+            );
+
+            pathWithWalk.add(walkingRouteDest);
+          }
+        } else {
+          // Add walking step at the start if needed
+          var firstRoute = pathFromOrigin[0];
+          LatLng nearestStart = findClosestPointToOrigin(
+              firstRoute.routeCoordinates, originLocation, proximityThreshold);
+
+          double startDistance =
+              calculateDistances(nearestStart, originLocation);
+
+          if (nearestStart != invalid && startDistance > 0.0001) {
+            RouteSuggest walkingRouteStart = RouteSuggest(
+              pointA: originLocation,
+              pointB: nearestStart,
+              waypoints: [originLocation, nearestStart],
+              terminalID: -1, // Special ID for walking step
+              transportationID: 6, // ID for walking transport type
+              routeCoordinates: [originLocation, nearestStart],
+              franchiseID: -1, // Special ID for walking step
+            );
+            pathWithWalk.add(walkingRouteStart);
+          }
+
+          // Iterate through the rest of the routes and check for walking gaps
+          double walkProximityThreshold = 0.0001;
+          for (int i = 0; i < pathFromOrigin.length - 1; i++) {
+            var currentRoute = pathFromOrigin[i];
+            var nextRoute = pathFromOrigin[i + 1];
+            LatLng pointA = LatLng(0.0, 0.0);
+            LatLng pointB = LatLng(0.0, 0.0);
+
+            pathWithWalk.add(pathFromOrigin[i]);
+
+            pointA = findClosestPointIfNear(currentRoute.routeCoordinates,
+                nextRoute.routeCoordinates, proximityThreshold);
+            pointB = findClosestPointIfNear(nextRoute.routeCoordinates,
+                currentRoute.routeCoordinates, proximityThreshold);
+
+            double distanceBetweenRoutes = calculateDistances(pointA, pointB);
+
+            if (distanceBetweenRoutes <= proximityThreshold &&
+                distanceBetweenRoutes > walkProximityThreshold) {
+              // Check if walking route is needed between routes
+              if (pointA.latitude != 0.0 && pointA.longitude != 0.0) {
+                if (pointB.latitude != 0.0 && pointB.longitude != 0.0) {
+                  RouteSuggest walkingRoute = RouteSuggest(
+                    pointA: pointA,
+                    pointB: pointB,
+                    waypoints: [pointA, pointB],
+                    terminalID: -1, // Special ID for walking step
+                    transportationID: 6, // ID for walking transport type
+                    routeCoordinates: [pointA, pointB],
+                    franchiseID: -1, // Special ID for walking step
+                  );
+                  pathWithWalk.add(walkingRoute);
+                }
+              }
+            }
+          }
+
+          // Add the last route in the path
+          pathWithWalk.add(pathFromOrigin.last);
+
+          // Add walking step at the end if needed
+          var lastRoute = pathFromOrigin.last;
+          LatLng nearestEnd = findClosestPointToOrigin(
+              lastRoute.routeCoordinates,
+              destinationLocation,
+              proximityThreshold);
+
+          double endDistance =
+              calculateDistances(nearestEnd, destinationLocation);
+
+          if (nearestEnd != invalid && endDistance > 0.0001) {
+            RouteSuggest walkingRouteEnd = RouteSuggest(
+              pointA: nearestEnd,
+              pointB: destinationLocation,
+              waypoints: [nearestEnd, destinationLocation],
+              terminalID: -1,
+              transportationID: 6,
+              routeCoordinates: [nearestEnd, destinationLocation],
+              franchiseID: -1,
+            );
+
+            pathWithWalk.add(walkingRouteEnd);
+          }
+        }
+
+        // Check if this path is already in the seen paths set to prevent duplication
+        String pathStringWalk = pathWithWalk
+            .map((route) => route.franchiseID.toString())
+            .join(' -> ');
+
+        String pathString = pathFromOrigin
+            .map((route) => route.franchiseID.toString())
+            .join(' -> ');
+
+        if (!seenPaths.contains(pathString)) {
+          // Add new unique path to the allPaths list
+          allPaths.add(pathWithWalk);
+          seenPaths.add(pathString);
+          print("Added new unique path: $pathString");
+          print("With walk: $pathStringWalk");
+        } else {
+          print("Duplicate path ignored: $pathString");
+        }
+      }
     }
 
     // Additional code to process the paths
@@ -1096,8 +1550,12 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             route.franchiseID]; // Retrieve RouteDetail based on franchiseID
         var routeData = routeLookup[route.franchiseID];
 
+        bool walk = false;
+
         // Check for walking route (franchiseID or transportationID -1 indicates a walking step)
         if (route.franchiseID == -1 || route.transportationID == 6) {
+          walk = true;
+
           double totalDistance = 0;
           double totalTimeForPath = 0;
 
@@ -1130,6 +1588,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
           // Create TravelStep for walking route
           TravelStep travelStep = TravelStep(
+            FranchiseID: -1,
             transportationName: 'Walk',
             travelTime: totalTimeForPath, //minutes
             babaanLocation: route.routeCoordinates
@@ -1138,7 +1597,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             sakayanLocation:
                 route.routeCoordinates.first, // Walking start point
             sakayanPlaceName: 'walk to $sakayan',
-            routeName: 'Walking Segment',
+            routeName: ['Walking Segment'],
             fare: 0, // No fare for walking
             travelDistance: totalDistanceInKm.floorToDouble(), //meter
             routePoints: route.routeCoordinates,
@@ -1146,53 +1605,52 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
 
           travelStepsForPath.add(travelStep);
         } else if (routeData != null) {
-          // if (i == 0) {
-          //   // First route: Set sakayanLocation to the point it meets the origin
-          //   sakayanLocation = findMeetingPointWithOrigin(route, originLocation);
-          // } else if (nextRoute != null) {
-          //   // Intermediate routes: Check for nearby but non-crossing routes
-          //   LatLng meetingPoint = findMeetingPoint(route, nextRoute);
+          /*
+          if (i == 0) {
+            // First route: Set sakayanLocation to the point it meets the origin
+            sakayanLocation = findMeetingPointWithOrigin(route, originLocation);
+          } else if (nextRoute != null) {
+            // Intermediate routes: Check for nearby but non-crossing routes
+            LatLng meetingPoint = findMeetingPoint(route, nextRoute);
 
-          //   if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
-          //     // Routes are nearby but not crossing, find the closest points
-          //     babaanLocation = findClosestPointIfNear(route.routeCoordinates,
-          //         nextRoute.routeCoordinates, proximityThreshold);
-          //     sakayanLocation = nextRoute.routeCoordinates.isNotEmpty
-          //         ? findClosestPointIfNear(nextRoute.routeCoordinates,
-          //             route.routeCoordinates, proximityThreshold)
-          //         : LatLng(0.0, 0.0);
-          //   } else {
-          //     // Routes are crossing, use the intersection point
-          //     babaanLocation = meetingPoint;
-          //     sakayanLocation = nextRoute.routeCoordinates.isNotEmpty
-          //         ? nextRoute.routeCoordinates.first
-          //         : LatLng(0.0, 0.0);
-          //   }
-          // } else {
-          //   // Last route: sakayanLocation is the point it meets the previous route
-          //   RouteSuggest previousRoute = path[i - 1];
-          //   LatLng meetingPoint = findMeetingPoint(previousRoute, route);
+            if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
+              // Routes are nearby but not crossing, find the closest points
+              babaanLocation = findClosestPointIfNear(route.routeCoordinates,
+                  nextRoute.routeCoordinates, proximityThreshold);
+              sakayanLocation = nextRoute.routeCoordinates.isNotEmpty
+                  ? findClosestPointIfNear(nextRoute.routeCoordinates,
+                      route.routeCoordinates, proximityThreshold)
+                  : LatLng(0.0, 0.0);
+            } else {
+              // Routes are crossing, use the intersection point
+              babaanLocation = meetingPoint;
+              sakayanLocation = nextRoute.routeCoordinates.isNotEmpty
+                  ? nextRoute.routeCoordinates.first
+                  : LatLng(0.0, 0.0);
+            }
+          } else {
+            // Last route: sakayanLocation is the point it meets the previous route
+            RouteSuggest previousRoute = path[i - 1];
+            LatLng meetingPoint = findMeetingPoint(previousRoute, route);
 
-          //   if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
-          //     // Routes are nearby but not crossing, find the closest points
-          //     sakayanLocation = findClosestPointIfNear(route.routeCoordinates,
-          //         previousRoute.routeCoordinates, proximityThreshold);
-          //   } else {
-          //     // Routes are crossing, use the intersection point
-          //     sakayanLocation = meetingPoint;
-          //   }
+            if (meetingPoint.latitude == 0.0 && meetingPoint.longitude == 0.0) {
+              // Routes are nearby but not crossing, find the closest points
+              sakayanLocation = findClosestPointIfNear(route.routeCoordinates,
+                  previousRoute.routeCoordinates, proximityThreshold);
+            } else {
+              // Routes are crossing, use the intersection point
+              sakayanLocation = meetingPoint;
+            }
 
-          //   babaanLocation =
-          //       userDestination; // Set babaan for last route as the destination
-          // }
+            babaanLocation =
+                userDestination; // Set babaan for last route as the destination
+          }
+          */
 
           LatLng babaanLocation;
           LatLng sakayanLocation;
 
           RouteSuggest? nextRoute = (i < path.length - 1) ? path[i + 1] : null;
-
-          print(
-              "][mlkniuhuibFranchiseID: ${route.franchiseID}, TransportationID: ${route.transportationID}");
 
           if (route.franchiseID == -1) {
             // Walking route: Set babaanLocation and sakayanLocation
@@ -1204,6 +1662,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             print(
                 "------------walk sakayan: $sakayanLocation babaan: $babaanLocation");
           } else {
+            walk = false;
             if (i == 0) {
               // First route: Set babaanLocation to where it meets the next route
               if (nextRoute != null) {
@@ -1246,7 +1705,8 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
               } else {
                 // Routes are crossing, use the intersection point
                 sakayanLocation = meetingPoint;
-                babaanLocation = meetingPoint;
+                babaanLocation = findClosestPointIfNear(route.routeCoordinates,
+                    nextRoute.routeCoordinates, proximityThreshold);
               }
             } else {
               // Last route: sakayanLocation is the point it meets the previous route
@@ -1312,7 +1772,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           }
 
           // // Construct route name
-          String routeName = '${detail?.pointA} ⇌ ${detail?.pointB}';
+          List<String> routeName = ['${detail?.pointA} ⇌ ${detail?.pointB}'];
 
           Future<String> sakayanName = getSakayanName(sakayanLocation);
           Future<String> babaanName = getSakayanName(babaanLocation);
@@ -1321,11 +1781,12 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           String sakayan = await sakayanName;
           String babaan = await babaanName;
 
-          List<LatLng> routeCoordinates = await fetchRouteCoordinates(
-              babaanLocation, sakayanLocation, route.waypoints);
+          // List<LatLng> routeCoordinates = await fetchRouteCoordinates(
+          //     babaanLocation, sakayanLocation, route.waypoints);
 
           // Create the TravelStep
           TravelStep travelStep = TravelStep(
+            FranchiseID: route.franchiseID,
             transportationName: routeData.transportationName,
             travelTime: totalTimeForPath.floorToDouble(),
             babaanLocation: babaanLocation,
@@ -1335,7 +1796,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
             routeName: routeName,
             fare: RouteFare,
             travelDistance: totalDistanceInKm.floorToDouble(),
-            routePoints: routeCoordinates,
+            routePoints: route.routeCoordinates,
             //route.waypoints,
           );
 
@@ -1368,11 +1829,11 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       print('establishemnt Nameeee: $sakayanName');
     } else if (address != null && address.isNotEmpty) {
       sakayanName = address; // Use the address if establishment is null
-      print('address Nameeee: $sakayanName');
+      //print('address Nameeee: $sakayanName');
     } else if (landmarks != null && landmarks.isNotEmpty) {
       sakayanName = landmarks.join(
           ', '); // Use landmarks if both establishment and address are null
-      print('landmarks Nameeee: $sakayanName');
+      //print('landmarks Nameeee: $sakayanName');
     } else {
       sakayanName = 'No Location Available';
     }
@@ -1380,7 +1841,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     return sakayanName;
   }
 
-  Future<String> getAddressFromLatLng(LatLng latLng) async {
+  Future<String?> getAddressFromLatLng(LatLng latLng) async {
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/geocode/json?latlng=${latLng.latitude},${latLng.longitude}&key=$apiKey',
     );
@@ -1393,7 +1854,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         String address = data['results'][0]['formatted_address'];
         return address;
       } else {
-        throw Exception('No address found for this location');
+        return null;
       }
     } else {
       throw Exception('Failed to fetch address');
@@ -1401,7 +1862,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
   }
 
   bool meronLandmark = false;
-  Future<List<String>> getNearbyLandmarks(LatLng latLng) async {
+  Future<List<String>?> getNearbyLandmarks(LatLng latLng) async {
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLng.latitude},${latLng.longitude}&radius=500&key=$apiKey',
     );
@@ -1419,11 +1880,11 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         return landmarks;
       } else {
         meronLandmark = false;
-        throw Exception('No landmarks found nearby');
+        return null;
       }
     } else {
       meronLandmark = false;
-      throw Exception('Failed to fetch landmarks');
+      return null;
     }
   }
 
@@ -1571,6 +2032,13 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
   }
 
 //transfer routes--------------------------------------------------------------------------------------------------------------
+  bool isNavigating = false;
+  @override
+  void dispose() {
+    isNavigating = true;
+    super.dispose();
+  }
+
   List<CombinedRouteData> combinedRoutes = [];
   initData() async {
     // Step 1: Find Nearby Routes
@@ -1578,6 +2046,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     if (nearbyRoutes.isNotEmpty) {
       List<RouteSuggest> routesTerminal = await fetchRoutesFromAPI();
       neabyRoutesEnd(destinationLocation);
+      testPolyline();
 // Find and store transfer points
       List<TransferPoint> transferPoints =
           findTransferPoints(nearbyRoutes, routesTerminal);
@@ -1610,6 +2079,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
     }
   }
 
+  @override
   void initState() {
     super.initState();
     _controllerTo.text = widget.originName;
@@ -1630,29 +2100,33 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
       double.parse(widget.longDestination),
     );
 
-    loadRoutes();
+    if (!isNavigating) {
+      loadRoutes();
 
-    initData();
+      initData();
+
+      getCurrentLocation().then(
+        (value) {
+          lat = '${value.latitude}';
+          long = '${value.longitude}';
+          setState(() {
+            print('Latitude: $lat, Longtitude: $long');
+            markers.add(Marker(
+              markerId: const MarkerId('current_location'),
+              position: LatLng(value.latitude, value.longitude),
+              infoWindow: const InfoWindow(title: 'Current Location'),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue),
+            ));
+          });
+          // liveLocation();
+        },
+      );
+    }
+
     // _fetchAndDisplayRoutes();
 
     //gps
-    getCurrentLocation().then(
-      (value) {
-        lat = '${value.latitude}';
-        long = '${value.longitude}';
-        setState(() {
-          print('Latitude: $lat, Longtitude: $long');
-          markers.add(Marker(
-            markerId: const MarkerId('current_location'),
-            position: LatLng(value.latitude, value.longitude),
-            infoWindow: const InfoWindow(title: 'Current Location'),
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          ));
-        });
-        // liveLocation();
-      },
-    );
   }
 
   @override
@@ -1783,7 +2257,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
                                     for (var step in paths) {
                                       totalFare += step.fare.floor();
                                       totalTimeForPath +=
-                                          step.travelTime.floor();
+                                          step.travelTime!.floor();
                                     }
 
                                     List<String> transportationNamesList =
@@ -1985,7 +2459,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
         ),
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
-        // polylines: _polylines,
+        polylines: _polylines,
         //markers: markers,
         onMapCreated: (GoogleMapController controller) {
           mapController = controller;
