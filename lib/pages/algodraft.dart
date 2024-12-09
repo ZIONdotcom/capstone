@@ -1822,7 +1822,7 @@ class _RouteScreenState extends State<RouteFinderAlgodraft> {
           'Unknown Establishment'; // Replace 'name' with the actual key
 
       print('establishemnt Nameeee: $sakayanName');
-    } else if (address.isNotEmpty) {
+    } else if (address!.isNotEmpty) {
       sakayanName = address; // Use the address if establishment is null
       //print('address Nameeee: $sakayanName');
     } else if (landmarks != null && landmarks.isNotEmpty) {

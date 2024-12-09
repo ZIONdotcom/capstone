@@ -3289,7 +3289,7 @@ void insertDetailsToDB() async {
       body: {...originData,
        ...destinationData,
        'steps_map': stepsMapJson,
-       'steps-poly': stepspolyMap},
+       },
       //  'lat_polyline_points' : polyline_latitudePointsJson,
       //  'long_polyline_points' : polyline_longitudePointsJson},
     );
@@ -3448,12 +3448,8 @@ class DialogPopUp {
                 TextButton(
                   child: const Text("Preview"),
                   onPressed: () {
-                    // DataManager().insertDetailsToDB();
-                    
                     // print(data[1]['username']); 
-                    Navigator.of(context).pop();
-                    //method for data insertion
-                    // Navigator.of(context).pop();  
+                    Navigator.of(context).pop(); 
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -3483,7 +3479,7 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 186, 202, 252),
+        backgroundColor: const Color(0xFFc2d0ff),
         title: const Text(
           'Review your route',
           style: TextStyle(
@@ -3492,203 +3488,135 @@ class _PreviewOfSteps_ClassState extends State<PreviewOfSteps_Class> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const SizedBox(height: 15),
-              ...DataManager().getStepsMap().entries.map((entry){
-              
-              var stepType = entry.value[0];
-              var stepLocationDetails = entry.value[1];
-              int listLength = entry.value.length;
-              var stepDetails;
-              if(listLength == 3){
-                print('length is three');
-                stepDetails = entry.value[2];
-              }
-              
-              return Padding(
-                padding:const EdgeInsets.only(left:15.0, right: 15.0, top:5),
-                child: Row(
-                  
-                  children: [
-                    
-                    const Row(
-                      children: [
-          
-                      ],
-                    ),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.only(left: 10.0),
-                        decoration: BoxDecoration(
-                        color: Colors.white, //bg
-                        borderRadius: BorderRadius.circular(5.0),
-                        // boxShadow: [
-                        //   BoxShadow(
-                        //     color: Colors.black.withOpacity(0.5), // Shadow color with opacity
-                        //     blurRadius: 3.0, // How much the shadow spreads
-                        //     // offset: const Offset(3, 3), // Shadow direction (right, down)
-                        //   ),
-                        // ],
-                        // border: Border.all(
-                        //   color: Color(0xFFc2d0ff), // Border color
-                        //   width: 1.0, // Border width
-                        // ),
-                        // gradient: const LinearGradient( // Add a gradient background
-                        //   colors: [Color(0xFFc2d0ff), Colors.white],
-                        //   begin: Alignment.topRight,
-                        //   end: Alignment.bottomLeft,
-                        // ),
-                      ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              children: [
-                                if(stepType == 'origin')
-                                const Icon(
-                                  Icons.location_on,
-                                  size: 45,
-                                  color: Color(0xFFc2d0ff),
-                                )
-                                else if(stepType == 'walk')
-                                const Icon(
-                                  Icons.directions_walk,
-                                  size: 45,
-                                  color: Color(0xFFc2d0ff),
-                                )
-                                 else if(stepType == 'ride')
-                                const Icon(
-                                  Icons.directions_bus_filled,
-                                  size: 45,
-                                  color: Color(0xFFc2d0ff),
-                                ),
-                                Container(
-                                width: 2,
-                                height: 40,
-                                color: const Color(0xffc2d0ff),
-                              ),
-          
-                              ],
-                            ),
-                            const SizedBox(width: 15),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 10),
-                                  Text(
-                                  '$stepType',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                 ),
-                                 Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children:[
-                                      Text(
-                                        'Location name: ${stepLocationDetails[3]}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.normal,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Landmark: ${stepLocationDetails[4]}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.normal,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      if(listLength == 3)
-                                      Text(
-                                        'Instructions: ${stepDetails[0]}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.normal,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      if(listLength == 3 && stepDetails.length == 3)
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Vehicle: ${stepDetails[2]}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.normal,
-                                              fontSize:10,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 25),
-                                          Text(
-                                            'Fare: ${stepDetails[1]}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                          
-                                        ],
-                                      )
-                                    ]
-                                  )
-                                 ),
-                                 
-                                ],
-                              ),
-          
-                          ],
-                        ),
-                      ),
-                    )                              
-                  ],
-                ),
-              );
-            }),
-            ]
-          
-            
-          ),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextButton(
-                onPressed: () {
-                  DataManager().insertDetailsToDB();
-                    
-                    // print(data[1]['username']); 
-                    Navigator.of(context).pop();
-                    //method for data insertion
-                    Navigator.of(context).pop();
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: const Color.fromARGB(255, 99, 131, 249),
-                  minimumSize: const Size(131, 26), 
-                ),
-                child: const Text('Confirm'),
-              ), 
+      body: Column(
+        children: DataManager().getStepsMap().entries.map((entry){
+          return const Padding(
+            padding: EdgeInsets.all(15.0),
+            child: Row(
+
             ),
-          )
-        ],
+          );
+        }).toList(),
+
+        
       )
     );
   }
 }
-class PinnedLocation {
-  final LatLng origin;
-  final LatLng destination;
-  final LatLng midpoint;
-  final List<LatLng> polylinePoints; 
 
-  PinnedLocation({
-    required this.origin,
-    required this.destination,
-    required this.midpoint,
-    required this.polylinePoints,
-  });
-}
+
+
+
+//Walk widget
+ // Retrieve existing data for this page from DataManager if it exists
+    // var stepDetails = DataManager().get_ExistingStepDetails();
+    // if (stepDetails != null && stepDetails.length >= 3) {
+    //   // Populate controllers with existing data
+    //   locationName_controller.text = stepDetails[0];
+    //   landmarkName_controller.text = stepDetails[1];
+    //   instructions_controller.text = stepDetails[2];
+    // }
+    // Add listeners to save data back to DataManager as the user types
+    // locationName_controller.addListener(_saveChangesToDataManager);
+    // landmarkName_controller.addListener(_saveChangesToDataManager);
+    // instructions_controller.addListener(_saveChangesToDataManager);
+
+    // Add listener to check if all fields are filled
+   
+
+
+    // locationName_controller.addListener(notEmptyChecker);
+    // instructions_controller.addListener(notEmptyChecker);
+  
+    // // if(DataManager().stepChecker() == true){
+    // //   List<dynamic> stepDetails = DataManager().getStepsInformation();
+    // //  print(stepDetails);
+    // //  if(stepDetails.length == 3){
+    // //   setState(() {
+    // //    locationName_controller.text = stepDetails[2][0];
+    // //    landmarkName_controller.text = stepDetails[2][1];
+    // //    instructions_controller.text = stepDetails[2][2];
+    // //  });
+    // //  }
+     
+    // // } 
+    // // if(DataManager().getStepsMap()[DataManager().getCountTrackers()[0]]!.length == 3){
+    // //   locationName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][0] = locationName_controller.text;
+    // //     });
+    // //     landmarkName_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][1] = locationName_controller.text;
+    // //     });
+    // //     instructions_controller.addListener((){
+    // //       DataManager().get_accessOnValuesInMap()[2][2] = instructions_controller.text;
+    // //     });
+    // // }
+    
+    // // //for existing step
+    // // if(DataManager().get_ExistingStepDetails() != null){
+    // //   List<dynamic> originDetails = DataManager().get_ExistingStepDetails()!;
+    // //   //exameple: [locatiion_name,landmark, instructions]
+    // //   setState(() {
+    // //     locationName_controller.text = originDetails[0];
+    // //     landmarkName_controller.text = originDetails[1];
+    // //     instructions_controller.text = originDetails[2];
+          
+    // //     //for displaying the existing next step
+    // //     if(DataManager().get_nextButton() != null){
+    // //       nextButton = DataManager().get_nextButton()!;
+    // //       hasNextStep = true;
+    // //     }
+    // //     else{
+    // //       hasNextStep = false;
+    // //     }
+        
+    // //   });
+      
+    // // }else{
+    // //   print('error fetching data: ${DataManager().get_ExistingStepDetails()}');
+    // // }
+    // // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    // //   print('contains key = true');
+    // //   locationName_controller.clear();
+    // //     landmarkName_controller.clear();
+    // //     instructions_controller.clear();
+    // //     hasNextStep = false;
+    // //     nextButton = '';
+    // //     print('clear!');
+    // //   // if(DataManager().getStepsMap()[DataManager().getCurrentPageTracker()]!.length == 2){
+        
+    // //   // }
+    // //   if(DataManager().getStepsMap().length > DataManager().getCurrentPageTracker()){
+    // //   List<dynamic> stepDetails = DataManager().getValueInStepsMap();
+    // //   print('step Details: $stepDetails');
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   if(stepDetails.length == 3){ //has walk, location details, and step details
+    // //     setState(() {
+    // //       locationName_controller.text = stepDetails[2][0];
+    // //       landmarkName_controller.text = stepDetails[2][1];
+    // //       instructions_controller.text = stepDetails[2][2];
+    // //       nextButton = DataManager().getStepsMap()[DataManager().getCurrentPageTracker() +1]![0];
+    // //       // print('next Button: $nextButton');
+    // //       hasNextStep = true;
+    // //       print('update!');
+          
+    // //     });
+        
+        
+
+    // //     //get the next step for the button
+
+    // //   }
+      
+    // //   // example:  [walk, [488,Pandi, Central Luzon, 14.852157652293137, 120.94052150845529][kanto,keme, go to kineme]]
+    // //   }
+    // // }
+    // print('walk add - - - - - -- -- - - - ');
+    
+    // if(DataManager().getStepsMap().containsKey(DataManager().getCurrentPageTracker())){
+    //   if(DataManager().getValueInStepsMap().length == 3){
+    //     locationName_controller.text = DataManager().get_ExistingStepDetails()![0];
+    //     landmarkName_controller.text = DataManager().get_ExistingStepDetails()![1];
+    //     instructions_controller.text = DataManager().get_ExistingStepDetails()![2];
+    //   }
+    // }
